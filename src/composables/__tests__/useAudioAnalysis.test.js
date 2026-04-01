@@ -158,6 +158,48 @@ describe('useAudioAnalysis', () => {
     await expect(analyze(null, 30)).rejects.toThrow('audioBuffer is required')
   })
 
+  it('sends only the clipped PCM slice to the worker when clipStart/clipEnd are provided', async () => {
+    const { analyze } = await freshUseAudioAnalysis()
+    const sampleRate = 44100
+    const totalSamples = sampleRate * 10  // 10 seconds
+    const pcm = new Float32Array(totalSamples)
+    const audioBuffer = {
+      sampleRate,
+      duration: 10,
+      numberOfChannels: 1,
+      getChannelData: vi.fn(() => pcm),
+    }
+
+    const promise = analyze(audioBuffer, 30, 1024, 2, 5)  // clip: 2s–5s = 3s = 132300 samples
+    workerInstance._emit({ type: 'done', frameData: makeFakeFrameData(90) })
+    await promise
+
+    // Worker should have received a pcmData slice of exactly 3s worth of samples
+    const sentPayload = workerInstance.postMessage.mock.calls[0][0]
+    const expectedSamples = Math.round((5 - 2) * sampleRate)  // 132300
+    expect(sentPayload.pcmData.length).toBe(expectedSamples)
+  })
+
+  it('sends full PCM when clipStart=0 and clipEnd=null (default)', async () => {
+    const { analyze } = await freshUseAudioAnalysis()
+    const sampleRate = 44100
+    const totalSamples = sampleRate * 5
+    const pcm = new Float32Array(totalSamples)
+    const audioBuffer = {
+      sampleRate,
+      duration: 5,
+      numberOfChannels: 1,
+      getChannelData: vi.fn(() => pcm),
+    }
+
+    const promise = analyze(audioBuffer, 30)
+    workerInstance._emit({ type: 'done', frameData: makeFakeFrameData(150) })
+    await promise
+
+    const sentPayload = workerInstance.postMessage.mock.calls[0][0]
+    expect(sentPayload.pcmData.length).toBe(totalSamples)
+  })
+
   it('reset clears all state', async () => {
     const { analyze, frameData, progress, isAnalyzing, reset } = await freshUseAudioAnalysis()
     const audioBuffer = makeAudioBuffer()
