@@ -1,15 +1,14 @@
 import { ref } from 'vue'
 
 /**
- * Checks browser support for WebCodecs and the specific codecs used for export.
+ * Checks browser support for the specific codec pairs used for export.
+ * Both the video AND audio codec must be supported for a format to be enabled.
  *
  * Call `checkCodecSupport()` once on app mount. All refs update reactively.
  *
- * - `isWebCodecsSupported` — false means WebCodecs API is entirely absent (e.g. Safari < 16)
- * - `canExportMp4`  — true when AVC (H.264) encoding is available (Chrome/Edge; not Firefox)
- * - `canExportWebM` — true when VP9 encoding is available (Chrome/Firefox/Edge)
- *
- * Uses VideoEncoder.isConfigSupported() directly for accurate per-browser results.
+ * - `isWebCodecsSupported` — false means WebCodecs API is entirely absent
+ * - `canExportMp4`  — AVC video + AAC audio both available (Chrome/Edge; not Firefox)
+ * - `canExportWebM` — VP9 video + Opus audio both available (Chrome/Firefox/Edge)
  *
  * Usage:
  *   const { checkCodecSupport, isWebCodecsSupported, canExportMp4, canExportWebM } = useBrowserSupport()
@@ -22,11 +21,11 @@ export function useBrowserSupport() {
   const isChecking = ref(false)
 
   /**
-   * Probes real encoding support by actually encoding a tiny frame.
-   * `VideoEncoder.isConfigSupported()` alone is unreliable — some browsers
-   * (e.g. Firefox for AVC) report supported=true but fail at encode time.
+   * Probes video codec support by actually encoding a tiny frame.
+   * `isConfigSupported()` alone is unreliable — Firefox reports AVC as
+   * config-supported but fails at encode time.
    */
-  async function probeCodec(codec) {
+  async function probeVideoCodec(codec) {
     if (!globalThis.VideoEncoder || !globalThis.VideoFrame) return false
     try {
       const config = { codec, width: 64, height: 64, bitrate: 500_000, framerate: 30 }
@@ -65,17 +64,39 @@ export function useBrowserSupport() {
     }
   }
 
+  /**
+   * Probes audio codec support via AudioEncoder.isConfigSupported().
+   * Firefox correctly reports AAC as unsupported, so isConfigSupported is
+   * sufficient here (no real encode needed).
+   */
+  async function probeAudioCodec(codec) {
+    if (!globalThis.AudioEncoder) return false
+    try {
+      const result = await globalThis.AudioEncoder.isConfigSupported({
+        codec,
+        sampleRate: 48000,
+        numberOfChannels: 2,
+        bitrate: 192_000,
+      })
+      return result.supported === true
+    } catch {
+      return false
+    }
+  }
+
   async function checkCodecSupport() {
     if (!isWebCodecsSupported.value) return
 
     isChecking.value = true
     try {
-      const [mp4Ok, webmOk] = await Promise.all([
-        probeCodec('avc1.42001f'),   // H.264 Baseline — Chrome/Edge yes, Firefox no
-        probeCodec('vp09.00.10.08'), // VP9 — Chrome/Firefox/Edge yes
+      const [avcOk, aacOk, vp9Ok, opusOk] = await Promise.all([
+        probeVideoCodec('avc1.42001f'),   // H.264 video — Chrome/Edge yes, Firefox no
+        probeAudioCodec('mp4a.40.2'),     // AAC audio   — Chrome/Edge yes, Firefox no
+        probeVideoCodec('vp09.00.10.08'), // VP9 video   — Chrome/Firefox/Edge yes
+        probeAudioCodec('opus'),          // Opus audio  — Chrome/Firefox/Edge yes
       ])
-      canExportMp4.value = mp4Ok
-      canExportWebM.value = webmOk
+      canExportMp4.value = avcOk && aacOk
+      canExportWebM.value = vp9Ok && opusOk
     } finally {
       isChecking.value = false
     }
