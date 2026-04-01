@@ -94,7 +94,7 @@
             :export-error="exportError"
             :export-settings="exportSettings"
             :audio-duration="audioBuffer?.duration ?? 0"
-            :can-export="!!audioBuffer && !isLoading"
+            :can-export="!!audioBuffer && !isLoading && isSelectedFormatSupported"
             @export="onExport"
             @cancel="cancelExport"
           />
@@ -170,6 +170,12 @@ const {
 } = useBrowserSupport()
 
 onMounted(checkCodecSupport)
+
+// Whether the currently selected export format is supported in this browser
+const isSelectedFormatSupported = computed(() => {
+  const fmt = exportSettings.value.format
+  return fmt === 'mp4' ? canExportMp4.value : canExportWebM.value
+})
 
 // If the currently selected format becomes unsupported (e.g. MP4 on Firefox),
 // auto-switch to the first available format.

@@ -79,12 +79,16 @@ const formatLabel = computed(() =>
   props.exportSettings.format === 'webm' ? 'WebM' : 'MP4'
 )
 
-// Rough estimate: 8 Mbps video + 192 kbps audio
-const VIDEO_BITRATE = 8_000_000
+// Baseline: 8 Mbps at 1080p/30fps. Scale linearly with pixels-per-second.
+const REFERENCE_BITRATE = 8_000_000
+const REFERENCE_PIXELS_PER_SECOND = 1920 * 1080 * 30
 const AUDIO_BITRATE = 192_000
 
 const estimatedSizeMb = computed(() => {
-  const totalBits = (VIDEO_BITRATE + AUDIO_BITRATE) * props.audioDuration
+  const { width, height, fps } = props.exportSettings
+  const pixelsPerSecond = width * height * fps
+  const videoBitrate = REFERENCE_BITRATE * (pixelsPerSecond / REFERENCE_PIXELS_PER_SECOND)
+  const totalBits = (videoBitrate + AUDIO_BITRATE) * props.audioDuration
   return (totalBits / 8 / 1_000_000).toFixed(1)
 })
 
