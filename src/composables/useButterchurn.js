@@ -24,13 +24,16 @@ export function useButterchurn() {
     if (!isSupported) return
 
     canvasEl = canvas
-    const w = width ?? (canvas.clientWidth || 800)
-    const h = height ?? (canvas.clientHeight || 450)
+    const w = width ?? 800
+    const h = height ?? 450
 
-    // Pass pixelRatio: 1 so butterchurn sets canvas.width = w exactly.
-    // If we passed devicePixelRatio, butterchurn would multiply the dimensions
-    // (canvas.width = w * dpr), which causes the canvas to overflow its CSS
-    // container and appear cropped on retina displays.
+    // butterchurn never sets canvas.width/canvas.height itself — it reads the
+    // GL framebuffer size from whatever the canvas already has when the WebGL
+    // context is created. We must set them explicitly so the framebuffer matches
+    // the dimensions we pass to createVisualizer.
+    canvas.width = w
+    canvas.height = h
+
     visualizer.value = butterchurn.createVisualizer(audioContext, canvas, {
       width: w,
       height: h,
@@ -53,7 +56,10 @@ export function useButterchurn() {
   }
 
   function setSize(width, height) {
-    visualizer.value?.setRendererSize(width, height)
+    if (!canvasEl || !visualizer.value) return
+    canvasEl.width = width
+    canvasEl.height = height
+    visualizer.value.setRendererSize(width, height)
   }
 
   function startRenderLoop() {

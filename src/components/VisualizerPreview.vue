@@ -89,11 +89,9 @@ watch(() => props.preset, (preset) => {
 })
 
 function setupVisualizer() {
-  const { width, height } = canvasEl.value.getBoundingClientRect()
-  init(canvasEl.value, props.audioContext, {
-    width: Math.round(width) || 800,
-    height: Math.round(height) || 450,
-  })
+  // Init with a default size — the ResizeObserver fires immediately after
+  // observeResize() and calls setSize() with the true container dimensions.
+  init(canvasEl.value, props.audioContext)
   if (props.audioNode) connectAudio(props.audioNode)
   if (props.preset) loadPreset(props.preset, props.transitionDuration)
   startRenderLoop()
@@ -126,7 +124,8 @@ function observeResize() {
 }
 
 .visualizer-preview__canvas {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
 }
