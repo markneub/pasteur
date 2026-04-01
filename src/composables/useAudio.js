@@ -5,7 +5,12 @@ import { ref, shallowRef } from 'vue'
  *
  * AudioContext is created lazily on first use (satisfies autoplay policy).
  * Each call to loadFile decodes the file and prepares a new source node.
- * Call play() / stop() to control playback.
+ * Call play(offset) / stop() / seekTo(seconds) to control playback.
+ *
+ * Playback position tracking:
+ *   - playheadTime: reactive ref; updated when stop() is called or playback ends
+ *   - getCurrentTime(): returns live position while playing, playheadTime when stopped
+ *   - seekTo(seconds): stop → update playheadTime → restart if was playing
  */
 export function useAudio() {
   const audioContext = shallowRef(null)
@@ -15,8 +20,14 @@ export function useAudio() {
   const isLoading = ref(false)
   const loadError = ref(null)
 
+  // Reactive playhead position (seconds). Updated by stop() and seekTo().
+  const playheadTime = ref(0)
+
   // Active source node — replaced each time play() is called
   let sourceNode = null
+  // AudioContext clock snapshot taken when play() is called
+  let playStartContextTime = 0
+  let playStartOffset = 0
 
   function getOrCreateContext() {
     if (!audioContext.value) {
@@ -25,6 +36,16 @@ export function useAudio() {
       gainNode.value.connect(audioContext.value.destination)
     }
     return audioContext.value
+  }
+
+  /**
+   * Returns the current playback position in seconds.
+   * When playing: derived from AudioContext clock for sub-frame accuracy.
+   * When stopped: returns the last captured playheadTime.
+   */
+  function getCurrentTime() {
+    if (!isPlaying.value || !audioContext.value) return playheadTime.value
+    return playStartOffset + (audioContext.value.currentTime - playStartContextTime)
   }
 
   async function loadFile(file) {
@@ -70,14 +91,26 @@ export function useAudio() {
     sourceNode.buffer = audioBuffer.value
     sourceNode.connect(gainNode.value)
     sourceNode.onended = () => {
-      if (isPlaying.value) isPlaying.value = false
+      if (isPlaying.value) {
+        // Natural end of audio — reset playhead to start
+        playheadTime.value = 0
+        playStartContextTime = 0
+        isPlaying.value = false
+      }
     }
     sourceNode.start(0, offset)
+
+    // Capture the AudioContext clock snapshot for getCurrentTime()
+    playStartContextTime = ctx.currentTime
+    playStartOffset = offset
+
     isPlaying.value = true
   }
 
   function stop() {
     if (sourceNode) {
+      // Capture position before stopping so playheadTime is accurate
+      playheadTime.value = getCurrentTime()
       try {
         sourceNode.onended = null
         sourceNode.stop()
@@ -87,7 +120,19 @@ export function useAudio() {
       sourceNode.disconnect()
       sourceNode = null
     }
+    playStartContextTime = 0
     isPlaying.value = false
+  }
+
+  /**
+   * Seek to a specific position. If playing, stops first then restarts from new position.
+   * @param {number} seconds
+   */
+  async function seekTo(seconds) {
+    const wasPlaying = isPlaying.value
+    stop()
+    playheadTime.value = seconds
+    if (wasPlaying) await play(seconds)
   }
 
   function dispose() {
@@ -96,6 +141,7 @@ export function useAudio() {
     audioContext.value = null
     gainNode.value = null
     audioBuffer.value = null
+    playheadTime.value = 0
   }
 
   return {
@@ -105,9 +151,12 @@ export function useAudio() {
     isPlaying,
     isLoading,
     loadError,
+    playheadTime,
+    getCurrentTime,
     loadFile,
     play,
     stop,
+    seekTo,
     dispose,
   }
 }
