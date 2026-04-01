@@ -17,46 +17,56 @@
 
       <template v-else>
         <div class="visualizer-area">
-          <!-- VisualizerPreview will go here -->
-          <div class="visualizer-placeholder">
-            <p>{{ audioFile.name }}</p>
-            <p
-              v-if="isLoading"
-              class="status-text"
-            >
+          <VisualizerPreview
+            v-if="audioContext && gainNode"
+            ref="visualizerPreviewRef"
+            :audio-context="audioContext"
+            :audio-node="gainNode"
+            :preset="activePreset"
+          />
+          <div
+            v-else-if="isLoading"
+            class="visualizer-placeholder"
+          >
+            <p class="status-text">
               Decoding audio…
             </p>
-            <p
-              v-else-if="loadError"
-              class="status-text status-text--error"
-            >
+          </div>
+          <div
+            v-else-if="loadError"
+            class="visualizer-placeholder"
+          >
+            <p class="status-text status-text--error">
               {{ loadError }}
             </p>
-            <p
-              v-else-if="audioBuffer"
-              class="status-text"
-            >
-              {{ isPlaying ? 'Playing' : 'Paused' }} · {{ audioBuffer.duration.toFixed(1) }}s
-            </p>
-            <div class="visualizer-actions">
-              <button
-                v-if="audioBuffer && !isLoading"
-                class="btn-secondary"
-                @click="isPlaying ? stop() : play()"
-              >
-                {{ isPlaying ? 'Pause' : 'Play' }}
-              </button>
-              <button
-                class="btn-secondary"
-                @click="clearFile"
-              >
-                Remove file
-              </button>
-            </div>
           </div>
         </div>
 
         <aside class="controls-panel">
+          <div class="file-info">
+            <span class="file-name">{{ audioFile.name }}</span>
+            <span
+              v-if="audioBuffer"
+              class="file-duration"
+            >{{ audioBuffer.duration.toFixed(1) }}s</span>
+          </div>
+
+          <div class="playback-controls">
+            <button
+              v-if="audioBuffer && !isLoading"
+              class="btn-secondary"
+              @click="isPlaying ? stop() : play()"
+            >
+              {{ isPlaying ? 'Pause' : 'Play' }}
+            </button>
+            <button
+              class="btn-secondary"
+              @click="clearFile"
+            >
+              Remove file
+            </button>
+          </div>
+
           <!-- PresetSelector, ExportControls, ExportButton will go here -->
           <p class="controls-placeholder">
             Controls coming soon
@@ -70,10 +80,25 @@
 <script setup>
 import { ref } from 'vue'
 import DropZone from './components/DropZone.vue'
+import VisualizerPreview from './components/VisualizerPreview.vue'
 import { useAudio } from './composables/useAudio.js'
 
 const audioFile = ref(null)
-const { audioBuffer, isPlaying, isLoading, loadError, loadFile, play, stop, dispose } = useAudio()
+const activePreset = ref(null)
+const visualizerPreviewRef = ref(null)
+
+const {
+  audioContext,
+  audioBuffer,
+  gainNode,
+  isPlaying,
+  isLoading,
+  loadError,
+  loadFile,
+  play,
+  stop,
+  dispose,
+} = useAudio()
 
 async function onFileSelected(file) {
   audioFile.value = file
@@ -84,6 +109,7 @@ async function onFileSelected(file) {
 function clearFile() {
   dispose()
   audioFile.value = null
+  activePreset.value = null
 }
 </script>
 
@@ -150,6 +176,9 @@ button {
 .app-main {
   flex: 1;
   padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .visualizer-area {
@@ -158,24 +187,45 @@ button {
   background: #000;
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 24px;
 }
 
 .visualizer-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  color: #555;
 }
 
 .controls-panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.file-info {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.file-name {
+  font-size: 0.95rem;
+  color: #ddd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-duration {
+  font-size: 0.8rem;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.playback-controls {
+  display: flex;
+  gap: 8px;
 }
 
 .controls-placeholder {
@@ -190,11 +240,5 @@ button {
 
 .status-text--error {
   color: #e05c5c;
-}
-
-.visualizer-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
 }
 </style>
