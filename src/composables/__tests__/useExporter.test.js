@@ -83,8 +83,11 @@ function makeAudioBuffer(durationSecs = 0.1, sampleRate = 44100) {
 
 function makeAudioContext() {
   const dummyGain = { gain: { value: 1 } }
+  const dummyBuffer = { copyToChannel: vi.fn() }
   return {
     createGain: vi.fn(() => dummyGain),
+    createBuffer: vi.fn(() => dummyBuffer),
+    _dummyBuffer: dummyBuffer,
   }
 }
 
@@ -296,6 +299,58 @@ describe('useExporter', () => {
     await promise
 
     expect(mockOutput.finalize).toHaveBeenCalled()
+  })
+
+  it('trims audio buffer to clipStart/clipEnd range', async () => {
+    const { composable } = await freshUseExporter()
+    const { startExport } = composable
+    const sampleRate = 44100
+    const audioCtx = makeAudioContext()
+    const audioBuffer = makeAudioBuffer(10, sampleRate) // 10s audio
+
+    const promise = startExport({
+      audioBuffer,
+      audioContext: audioCtx,
+      presetTimeline: [{ presetName: 'foo', startTime: 0, transitionDuration: 1.5 }],
+      exportSettings: makeExportSettings(),
+      clipStart: 2,
+      clipEnd: 5,  // 3s clip
+    })
+
+    resolveAnalysis()
+    await promise
+
+    // createBuffer should be called with the trimmed sample count: 3s * 44100 = 132300
+    expect(audioCtx.createBuffer).toHaveBeenCalledWith(
+      1,           // numberOfChannels
+      Math.round((5 - 2) * sampleRate),  // 132300
+      sampleRate
+    )
+  })
+
+  it('uses full duration when clipStart=0 and no clipEnd', async () => {
+    const { composable } = await freshUseExporter()
+    const { startExport } = composable
+    const sampleRate = 44100
+    const duration = 0.1
+    const audioCtx = makeAudioContext()
+    const audioBuffer = makeAudioBuffer(duration, sampleRate)
+
+    const promise = startExport({
+      audioBuffer,
+      audioContext: audioCtx,
+      presetTimeline: [{ presetName: 'foo', startTime: 0, transitionDuration: 1.5 }],
+      exportSettings: makeExportSettings(),
+    })
+
+    resolveAnalysis()
+    await promise
+
+    expect(audioCtx.createBuffer).toHaveBeenCalledWith(
+      1,
+      Math.round(duration * sampleRate),
+      sampleRate
+    )
   })
 
   it('creates WebMOutputFormat for webm format', async () => {

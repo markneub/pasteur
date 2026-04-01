@@ -48,8 +48,10 @@ export function useExporter() {
    * @param {AudioContext} params.audioContext
    * @param {Array<{presetName: string, startTime: number, transitionDuration: number}>} params.presetTimeline
    * @param {{width: number, height: number, fps: number, format: 'mp4'|'webm'}} params.exportSettings
+   * @param {number} [params.clipStart=0] Start of the clip region in seconds
+   * @param {number|null} [params.clipEnd=null] End of the clip region (null = full duration)
    */
-  async function startExport({ audioBuffer, audioContext, presetTimeline, exportSettings }) {
+  async function startExport({ audioBuffer, audioContext, presetTimeline, exportSettings, clipStart = 0, clipEnd = null }) {
     if (isExporting.value) return
 
     cancelled = false
@@ -64,8 +66,11 @@ export function useExporter() {
     let visualizer = null
 
     try {
+      const clipEnd_ = clipEnd ?? audioBuffer.duration
+      const clipDuration = clipEnd_ - clipStart
+
       // ── Phase 1: Audio pre-analysis ─────────────────────────────────────
-      await analyze(audioBuffer, exportSettings.fps)
+      await analyze(audioBuffer, exportSettings.fps, 1024, clipStart, clipEnd_)
       if (cancelled) return
 
       // ── Phase 2: Rendering ───────────────────────────────────────────────
@@ -73,7 +78,7 @@ export function useExporter() {
       renderProgress.value = 0
 
       const { width, height, fps, format } = exportSettings
-      const totalFrames = Math.ceil(audioBuffer.duration * fps)
+      const totalFrames = Math.ceil(clipDuration * fps)
       if (totalFrames === 0) {
         throw new Error('Audio duration is too short to export any frames.')
       }
@@ -95,10 +100,13 @@ export function useExporter() {
         pixelRatio: 1,
       })
 
-      // Load t=0 preset instantly (blendTime=0)
-      const firstCue = presetTimeline[0]
-      if (firstCue) {
-        const preset = getPreset(firstCue.presetName)
+      // Load the active preset at clipStart instantly (blendTime=0).
+      // This is the last cue whose startTime <= clipStart, falling back to cue[0].
+      const activeAtClipStart = [...presetTimeline]
+        .filter((c) => c.startTime <= clipStart)
+        .at(-1) ?? presetTimeline[0]
+      if (activeAtClipStart) {
+        const preset = getPreset(activeAtClipStart.presetName)
         if (preset) visualizer.loadPreset(preset, 0)
       }
 
@@ -147,8 +155,22 @@ export function useExporter() {
 
       await output.start()
 
-      // Add full audio track in one shot — mediabunny handles chunking internally
-      await audioSource.add(audioBuffer)
+      // Build a trimmed AudioBuffer for the clip region so the audio track
+      // matches the video duration exactly.
+      const startSample = Math.round(clipStart * audioBuffer.sampleRate)
+      const endSample = Math.round(clipEnd_ * audioBuffer.sampleRate)
+      const trimmedBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        endSample - startSample,
+        audioBuffer.sampleRate
+      )
+      for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+        trimmedBuffer.copyToChannel(
+          audioBuffer.getChannelData(ch).subarray(startSample, endSample),
+          ch
+        )
+      }
+      await audioSource.add(trimmedBuffer)
       audioSource.close()
 
       if (cancelled) {
@@ -156,10 +178,13 @@ export function useExporter() {
         return
       }
 
-      // Build sorted list of future preset cues (after t=0)
+      // Build sorted list of future preset cues that fall within the clip.
+      // startFrame is relative to clipStart (frame 0 = clipStart seconds).
+      const frameOffset = Math.round(clipStart * fps)
       const futureCues = presetTimeline
         .slice(1)
-        .map((cue) => ({ ...cue, startFrame: Math.round(cue.startTime * fps) }))
+        .map((cue) => ({ ...cue, startFrame: Math.round(cue.startTime * fps) - frameOffset }))
+        .filter((cue) => cue.startFrame >= 0 && cue.startFrame < totalFrames)
         .sort((a, b) => a.startFrame - b.startFrame)
 
       // ── Non-realtime render loop ─────────────────────────────────────────
