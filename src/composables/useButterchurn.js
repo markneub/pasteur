@@ -27,10 +27,14 @@ export function useButterchurn() {
     const w = width ?? (canvas.clientWidth || 800)
     const h = height ?? (canvas.clientHeight || 450)
 
+    // Pass pixelRatio: 1 so butterchurn sets canvas.width = w exactly.
+    // If we passed devicePixelRatio, butterchurn would multiply the dimensions
+    // (canvas.width = w * dpr), which causes the canvas to overflow its CSS
+    // container and appear cropped on retina displays.
     visualizer.value = butterchurn.createVisualizer(audioContext, canvas, {
       width: w,
       height: h,
-      pixelRatio: window.devicePixelRatio || 1,
+      pixelRatio: 1,
     })
 
     isInitialized.value = true
