@@ -35,9 +35,20 @@ export function useAudio() {
     try {
       const ctx = getOrCreateContext()
       const arrayBuffer = await file.arrayBuffer()
-      audioBuffer.value = await ctx.decodeAudioData(arrayBuffer)
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error('The file is empty.')
+      }
+      const decoded = await ctx.decodeAudioData(arrayBuffer)
+      if (decoded.duration === 0 || decoded.length === 0) {
+        throw new Error('Audio file has zero duration.')
+      }
+      audioBuffer.value = decoded
     } catch (err) {
-      loadError.value = `Could not decode audio: ${err.message}`
+      if (err.name === 'EncodingError' || err.name === 'NotSupportedError') {
+        loadError.value = 'Unsupported or corrupted audio file. Try MP3, WAV, FLAC, or AAC.'
+      } else {
+        loadError.value = err.message
+      }
       audioBuffer.value = null
     } finally {
       isLoading.value = false

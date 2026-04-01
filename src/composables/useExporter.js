@@ -74,6 +74,9 @@ export function useExporter() {
 
       const { width, height, fps, format } = exportSettings
       const totalFrames = Math.ceil(audioBuffer.duration * fps)
+      if (totalFrames === 0) {
+        throw new Error('Audio duration is too short to export any frames.')
+      }
       const frameDuration = 1 / fps
       const fd = frameData.value
 
@@ -171,8 +174,42 @@ export function useExporter() {
           }
         }
 
-        visualizer.render()
-        await canvasSource.add(i * frameDuration, frameDuration)
+        try {
+          visualizer.render()
+        } catch (renderErr) {
+          const msg = renderErr?.message ?? ''
+          if (
+            msg.toLowerCase().includes('out of memory') ||
+            msg.toLowerCase().includes('context lost') ||
+            renderErr?.name === 'WEBGL_lose_context'
+          ) {
+            throw new Error(
+              'GPU ran out of memory. Try a smaller resolution (e.g. 1080p instead of 4K).'
+            )
+          }
+          throw renderErr
+        }
+
+        // Backpressure: wait if the encoder queue is getting too deep
+        // canvasSource exposes encodeQueueSize via its internal encoder
+        if (canvasSource.encodeQueueSize > 10) {
+          await new Promise((r) => setTimeout(r, 0))
+        }
+
+        try {
+          await canvasSource.add(i * frameDuration, frameDuration)
+        } catch (encErr) {
+          const msg = encErr?.message ?? ''
+          if (
+            msg.toLowerCase().includes('out of memory') ||
+            encErr?.name === 'EncodingError'
+          ) {
+            throw new Error(
+              'Encoder ran out of memory. Try a smaller resolution or lower frame rate.'
+            )
+          }
+          throw encErr
+        }
 
         renderProgress.value = (i + 1) / totalFrames
 

@@ -65,12 +65,14 @@
             <button
               v-if="audioBuffer && !isLoading"
               class="btn-secondary"
+              :aria-label="isPlaying ? 'Pause playback' : 'Play audio'"
               @click="isPlaying ? stop() : play()"
             >
               {{ isPlaying ? 'Pause' : 'Play' }}
             </button>
             <button
               class="btn-secondary"
+              aria-label="Remove audio file"
               @click="clearFile"
             >
               Remove file

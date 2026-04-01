@@ -2,11 +2,16 @@
   <div
     class="drop-zone"
     :class="{ 'drop-zone--active': isDragging, 'drop-zone--error': errorMessage }"
+    role="button"
+    tabindex="0"
+    aria-label="Drop an audio file here or press Enter to browse"
     @dragenter.prevent="onDragEnter"
     @dragover.prevent
     @dragleave="onDragLeave"
     @drop.prevent="onDrop"
     @click="openFilePicker"
+    @keydown.enter.prevent="openFilePicker"
+    @keydown.space.prevent="openFilePicker"
   >
     <input
       ref="fileInput"

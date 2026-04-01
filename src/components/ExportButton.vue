@@ -25,6 +25,7 @@
       <div
         class="progress-track"
         role="progressbar"
+        :aria-label="phaseLabel"
         :aria-valuenow="progressPct"
         aria-valuemin="0"
         aria-valuemax="100"
@@ -42,6 +43,7 @@
         v-if="!isExporting"
         class="btn-export"
         :disabled="!canExport"
+        :aria-label="canExport ? `Export as ${formatLabel}` : `Export as ${formatLabel} (load an audio file first)`"
         @click="emit('export')"
       >
         Export {{ formatLabel }}
@@ -50,6 +52,7 @@
       <button
         v-if="isExporting"
         class="btn-cancel"
+        aria-label="Cancel export"
         @click="emit('cancel')"
       >
         Cancel

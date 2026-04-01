@@ -9,6 +9,8 @@
           :key="preset.label"
           class="toggle-btn"
           :class="{ 'toggle-btn--active': activeSizePreset === preset.label }"
+          :aria-label="`${preset.label} (${preset.width}×${preset.height})`"
+          :aria-pressed="activeSizePreset === preset.label"
           @click="selectSizePreset(preset)"
         >
           {{ preset.label }}
@@ -16,6 +18,8 @@
         <button
           class="toggle-btn"
           :class="{ 'toggle-btn--active': activeSizePreset === 'Custom' }"
+          aria-label="Custom resolution"
+          :aria-pressed="activeSizePreset === 'Custom'"
           @click="selectCustomSize"
         >
           Custom
@@ -31,6 +35,7 @@
           min="1"
           max="7680"
           placeholder="Width"
+          aria-label="Custom width in pixels"
           :value="modelValue.width"
           @change="onCustomWidth"
         >
@@ -41,6 +46,7 @@
           min="1"
           max="4320"
           placeholder="Height"
+          aria-label="Custom height in pixels"
           :value="modelValue.height"
           @change="onCustomHeight"
         >
@@ -57,6 +63,8 @@
           :key="fps"
           class="toggle-btn"
           :class="{ 'toggle-btn--active': modelValue.fps === fps }"
+          :aria-label="`${fps} frames per second`"
+          :aria-pressed="modelValue.fps === fps"
           @click="emit('update:modelValue', { ...modelValue, fps })"
         >
           {{ fps }}
@@ -74,6 +82,8 @@
           class="toggle-btn"
           :class="{ 'toggle-btn--active': modelValue.format === fmt.value }"
           :disabled="!formatSupport[fmt.value]"
+          :aria-pressed="modelValue.format === fmt.value"
+          :aria-label="formatSupport[fmt.value] ? fmt.label : `${fmt.label} (not supported in this browser)`"
           :title="formatSupport[fmt.value] ? undefined : `${fmt.label} encoding is not supported in this browser`"
           @click="formatSupport[fmt.value] && emit('update:modelValue', { ...modelValue, format: fmt.value })"
         >
