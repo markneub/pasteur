@@ -79,7 +79,7 @@
             </button>
           </div>
 
-          <PresetSelector v-model="activePresetName" />
+          <PresetSelector v-model="selectedCuePresetName" />
 
           <ExportControls
             v-model="exportSettings"
@@ -116,22 +116,42 @@ import ExportButton from './components/ExportButton.vue'
 import { useAudio } from './composables/useAudio.js'
 import { useExporter } from './composables/useExporter.js'
 import { useBrowserSupport } from './composables/useBrowserSupport.js'
+import { useWaveform } from './composables/useWaveform.js'
 import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets.js'
 
 const audioFile = ref(null)
 const visualizerPreviewRef = ref(null)
 
-// --- Preset timeline (v1: single cue; architecture supports multiple) ---
+// --- Preset timeline ---
 const presetTimeline = ref([createPresetCue(DEFAULT_PRESET_NAME)])
 
-const activePresetName = computed({
-  get: () => presetTimeline.value[0].presetName,
-  set: (name) => { presetTimeline.value[0].presetName = name },
+// Index of the cue currently selected for editing via PresetSelector
+const selectedCueIndex = ref(0)
+
+// The preset name bound to PresetSelector — edits the selected cue
+const selectedCuePresetName = computed({
+  get: () => presetTimeline.value[selectedCueIndex.value]?.presetName ?? DEFAULT_PRESET_NAME,
+  set: (name) => {
+    presetTimeline.value = presetTimeline.value.map((c, i) =>
+      i === selectedCueIndex.value ? { ...c, presetName: name } : c
+    )
+  },
 })
 
-const activePreset = computed(() => getPreset(activePresetName.value))
+// activePreset drives the VisualizerPreview — shows the selected cue's preset
+const activePreset = computed(() => getPreset(selectedCuePresetName.value))
 
-const activeTransitionDuration = computed(() => presetTimeline.value[0].transitionDuration)
+const activeTransitionDuration = computed(() =>
+  presetTimeline.value[selectedCueIndex.value]?.transitionDuration ?? 1.5
+)
+
+// --- Clip trim state ---
+const clipStart = ref(0)
+const clipEnd = ref(null) // null = audioBuffer.duration
+const effectiveClipEnd = computed(() => clipEnd.value ?? audioBuffer.value?.duration ?? 0)
+
+// --- Waveform peaks ---
+const { peaks, computePeaks } = useWaveform()
 
 // --- Export settings ---
 const exportSettings = ref({
@@ -153,6 +173,18 @@ const {
   stop,
   dispose,
 } = useAudio()
+
+// Compute peaks and reset clip/cue state when a new audio file is loaded
+watch(audioBuffer, (buf) => {
+  if (buf) {
+    computePeaks(buf)
+    clipStart.value = 0
+    clipEnd.value = null
+    selectedCueIndex.value = 0
+  } else {
+    peaks.value = null
+  }
+})
 
 const {
   startExport,
@@ -200,6 +232,9 @@ function clearFile() {
   dispose()
   audioFile.value = null
   presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME)]
+  clipStart.value = 0
+  clipEnd.value = null
+  selectedCueIndex.value = 0
 }
 
 function onExport() {
@@ -209,8 +244,11 @@ function onExport() {
     audioContext: audioContext.value,
     presetTimeline: presetTimeline.value,
     exportSettings: exportSettings.value,
+    clipStart: clipStart.value,
+    clipEnd: effectiveClipEnd.value,
   })
 }
+
 </script>
 
 <style>
