@@ -21,16 +21,45 @@ export function useBrowserSupport() {
   const canExportWebM = ref(false)
   const isChecking = ref(false)
 
+  /**
+   * Probes real encoding support by actually encoding a tiny frame.
+   * `VideoEncoder.isConfigSupported()` alone is unreliable — some browsers
+   * (e.g. Firefox for AVC) report supported=true but fail at encode time.
+   */
   async function probeCodec(codec) {
+    if (!globalThis.VideoEncoder || !globalThis.VideoFrame) return false
     try {
-      const result = await globalThis.VideoEncoder.isConfigSupported({
-        codec,
-        width: 1280,
-        height: 720,
-        bitrate: 4_000_000,
-        framerate: 30,
+      const config = { codec, width: 64, height: 64, bitrate: 500_000, framerate: 30 }
+      const configCheck = await globalThis.VideoEncoder.isConfigSupported(config)
+      if (configCheck.supported !== true) return false
+
+      return await new Promise((resolve) => {
+        let settled = false
+        const settle = (ok) => {
+          if (settled) return
+          settled = true
+          try { encoder.close() } catch { /* ignore */ }
+          resolve(ok)
+        }
+
+        const encoder = new globalThis.VideoEncoder({
+          output: () => settle(true),
+          error: () => settle(false),
+        })
+
+        try {
+          encoder.configure(config)
+          const frame = new globalThis.VideoFrame(
+            new Uint8Array(64 * 64 * 4), // blank RGBA frame
+            { format: 'RGBA', codedWidth: 64, codedHeight: 64, timestamp: 0 },
+          )
+          encoder.encode(frame, { keyFrame: true })
+          frame.close()
+          encoder.flush().catch(() => settle(false))
+        } catch {
+          settle(false)
+        }
       })
-      return result.supported === true
     } catch {
       return false
     }
@@ -42,8 +71,8 @@ export function useBrowserSupport() {
     isChecking.value = true
     try {
       const [mp4Ok, webmOk] = await Promise.all([
-        probeCodec('avc1.42001f'), // H.264 Baseline Level 3.1 — unsupported in Firefox
-        probeCodec('vp09.00.10.08'), // VP9 Profile 0
+        probeCodec('avc1.42001f'),   // H.264 Baseline — Chrome/Edge yes, Firefox no
+        probeCodec('vp09.00.10.08'), // VP9 — Chrome/Firefox/Edge yes
       ])
       canExportMp4.value = mp4Ok
       canExportWebM.value = webmOk
