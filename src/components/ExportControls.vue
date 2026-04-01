@@ -73,7 +73,9 @@
           :key="fmt.value"
           class="toggle-btn"
           :class="{ 'toggle-btn--active': modelValue.format === fmt.value }"
-          @click="emit('update:modelValue', { ...modelValue, format: fmt.value })"
+          :disabled="!formatSupport[fmt.value]"
+          :title="formatSupport[fmt.value] ? undefined : `${fmt.label} encoding is not supported in this browser`"
+          @click="formatSupport[fmt.value] && emit('update:modelValue', { ...modelValue, format: fmt.value })"
         >
           {{ fmt.label }}
         </button>
@@ -105,7 +107,14 @@ const props = defineProps({
     required: true,
     // shape: { width: Number, height: Number, fps: Number, format: String }
   },
+  canExportMp4: { type: Boolean, default: true },
+  canExportWebM: { type: Boolean, default: true },
 })
+
+const formatSupport = computed(() => ({
+  mp4: props.canExportMp4,
+  webm: props.canExportWebM,
+}))
 
 const emit = defineEmits(['update:modelValue'])
 
@@ -172,6 +181,11 @@ function onCustomHeight(event) {
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.toggle-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .toggle-btn:hover {

@@ -9,6 +9,15 @@
       </p>
     </header>
 
+    <div
+      v-if="!isWebCodecsSupported"
+      class="compat-banner"
+      role="alert"
+    >
+      Your browser does not support the WebCodecs API required for export.
+      Please use a recent version of Chrome or Edge.
+    </div>
+
     <main class="app-main">
       <DropZone
         v-if="!audioFile"
@@ -73,6 +82,8 @@
           <ExportControls
             v-model="exportSettings"
             :disabled="isExporting"
+            :can-export-mp4="canExportMp4"
+            :can-export-web-m="canExportWebM"
           />
 
           <ExportButton
@@ -94,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
 import PresetSelector from './components/PresetSelector.vue'
@@ -102,6 +113,7 @@ import ExportControls from './components/ExportControls.vue'
 import ExportButton from './components/ExportButton.vue'
 import { useAudio } from './composables/useAudio.js'
 import { useExporter } from './composables/useExporter.js'
+import { useBrowserSupport } from './composables/useBrowserSupport.js'
 import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets.js'
 
 const audioFile = ref(null)
@@ -149,6 +161,26 @@ const {
   renderProgress,
   exportError,
 } = useExporter()
+
+const {
+  checkCodecSupport,
+  isWebCodecsSupported,
+  canExportMp4,
+  canExportWebM,
+} = useBrowserSupport()
+
+onMounted(checkCodecSupport)
+
+// If the currently selected format becomes unsupported (e.g. MP4 on Firefox),
+// auto-switch to the first available format.
+watch([canExportMp4, canExportWebM], () => {
+  const fmt = exportSettings.value.format
+  if (fmt === 'mp4' && !canExportMp4.value && canExportWebM.value) {
+    exportSettings.value = { ...exportSettings.value, format: 'webm' }
+  } else if (fmt === 'webm' && !canExportWebM.value && canExportMp4.value) {
+    exportSettings.value = { ...exportSettings.value, format: 'mp4' }
+  }
+})
 
 async function onFileSelected(file) {
   audioFile.value = file
@@ -231,6 +263,14 @@ button {
   font-size: 0.8rem;
   color: #666;
   margin-top: 2px;
+}
+
+.compat-banner {
+  background: #2a1a1a;
+  border-bottom: 1px solid #5c2a2a;
+  color: #e05c5c;
+  font-size: 0.85rem;
+  padding: 10px 32px;
 }
 
 .app-main {
