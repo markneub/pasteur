@@ -39,6 +39,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  transitionDuration: {
+    type: Number,
+    default: 1.5,
+  },
 })
 
 const containerEl = ref(null)
@@ -81,7 +85,7 @@ watch(() => props.audioNode, (newNode, oldNode) => {
 })
 
 watch(() => props.preset, (preset) => {
-  if (preset) loadPreset(preset)
+  if (preset) loadPreset(preset, props.transitionDuration)
 })
 
 function setupVisualizer() {
@@ -91,7 +95,7 @@ function setupVisualizer() {
     height: Math.round(height) || 450,
   })
   if (props.audioNode) connectAudio(props.audioNode)
-  if (props.preset) loadPreset(props.preset)
+  if (props.preset) loadPreset(props.preset, props.transitionDuration)
   startRenderLoop()
   observeResize()
 }

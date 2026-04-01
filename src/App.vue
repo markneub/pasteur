@@ -23,6 +23,7 @@
             :audio-context="audioContext"
             :audio-node="gainNode"
             :preset="activePreset"
+            :transition-duration="activeTransitionDuration"
           />
           <div
             v-else-if="isLoading"
@@ -67,9 +68,11 @@
             </button>
           </div>
 
-          <!-- PresetSelector, ExportControls, ExportButton will go here -->
+          <PresetSelector v-model="activePresetName" />
+
+          <!-- ExportControls, ExportButton will go here -->
           <p class="controls-placeholder">
-            Controls coming soon
+            Export controls coming soon
           </p>
         </aside>
       </template>
@@ -78,14 +81,27 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
+import PresetSelector from './components/PresetSelector.vue'
 import { useAudio } from './composables/useAudio.js'
+import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets.js'
 
 const audioFile = ref(null)
-const activePreset = ref(null)
 const visualizerPreviewRef = ref(null)
+
+// --- Preset timeline (v1: single cue; architecture supports multiple) ---
+const presetTimeline = ref([createPresetCue(DEFAULT_PRESET_NAME)])
+
+const activePresetName = computed({
+  get: () => presetTimeline.value[0].presetName,
+  set: (name) => { presetTimeline.value[0].presetName = name },
+})
+
+const activePreset = computed(() => getPreset(activePresetName.value))
+
+const activeTransitionDuration = computed(() => presetTimeline.value[0].transitionDuration)
 
 const {
   audioContext,
@@ -109,7 +125,7 @@ async function onFileSelected(file) {
 function clearFile() {
   dispose()
   audioFile.value = null
-  activePreset.value = null
+  presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME)]
 }
 </script>
 
