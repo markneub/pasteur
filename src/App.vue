@@ -70,10 +70,9 @@
 
           <PresetSelector v-model="activePresetName" />
 
-          <!-- ExportControls, ExportButton will go here -->
-          <p class="controls-placeholder">
-            Export controls coming soon
-          </p>
+          <ExportControls v-model="exportSettings" />
+
+          <!-- ExportButton will go here -->
         </aside>
       </template>
     </main>
@@ -85,6 +84,7 @@ import { ref, computed } from 'vue'
 import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
 import PresetSelector from './components/PresetSelector.vue'
+import ExportControls from './components/ExportControls.vue'
 import { useAudio } from './composables/useAudio.js'
 import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets.js'
 
@@ -102,6 +102,14 @@ const activePresetName = computed({
 const activePreset = computed(() => getPreset(activePresetName.value))
 
 const activeTransitionDuration = computed(() => presetTimeline.value[0].transitionDuration)
+
+// --- Export settings ---
+const exportSettings = ref({
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  format: 'mp4',
+})
 
 const {
   audioContext,
@@ -244,10 +252,6 @@ button {
   gap: 8px;
 }
 
-.controls-placeholder {
-  color: #555;
-  font-size: 0.9rem;
-}
 
 .status-text {
   font-size: 0.85rem;
