@@ -44,13 +44,13 @@ const mockFrameData = Array.from({ length: 5 }, () => ({
 }))
 
 vi.mock('../useAudioAnalysis.js', () => {
-  const { ref } = require('vue')
   return {
     useAudioAnalysis: () => {
-      const frameData = ref(null)
-      const progress = ref(0)
-      const isAnalyzing = ref(false)
-      const analysisError = ref(null)
+      // Plain ref-like objects — sufficient for unit tests that read .value directly
+      const frameData = { value: null }
+      const progress = { value: 0 }
+      const isAnalyzing = { value: false }
+      const analysisError = { value: null }
 
       const analyze = vi.fn(() =>
         new Promise((res, rej) => {

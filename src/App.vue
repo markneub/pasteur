@@ -70,9 +70,23 @@
 
           <PresetSelector v-model="activePresetName" />
 
-          <ExportControls v-model="exportSettings" />
+          <ExportControls
+            v-model="exportSettings"
+            :disabled="isExporting"
+          />
 
-          <!-- ExportButton will go here -->
+          <ExportButton
+            :is-exporting="isExporting"
+            :export-phase="exportPhase"
+            :analysis-progress="analysisProgress"
+            :render-progress="renderProgress"
+            :export-error="exportError"
+            :export-settings="exportSettings"
+            :audio-duration="audioBuffer?.duration ?? 0"
+            :can-export="!!audioBuffer && !isLoading"
+            @export="onExport"
+            @cancel="cancelExport"
+          />
         </aside>
       </template>
     </main>
@@ -85,7 +99,9 @@ import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
 import PresetSelector from './components/PresetSelector.vue'
 import ExportControls from './components/ExportControls.vue'
+import ExportButton from './components/ExportButton.vue'
 import { useAudio } from './composables/useAudio.js'
+import { useExporter } from './composables/useExporter.js'
 import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets.js'
 
 const audioFile = ref(null)
@@ -124,6 +140,16 @@ const {
   dispose,
 } = useAudio()
 
+const {
+  startExport,
+  cancel: cancelExport,
+  isExporting,
+  exportPhase,
+  analysisProgress,
+  renderProgress,
+  exportError,
+} = useExporter()
+
 async function onFileSelected(file) {
   audioFile.value = file
   await loadFile(file)
@@ -134,6 +160,16 @@ function clearFile() {
   dispose()
   audioFile.value = null
   presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME)]
+}
+
+function onExport() {
+  if (!audioBuffer.value || !audioContext.value) return
+  startExport({
+    audioBuffer: audioBuffer.value,
+    audioContext: audioContext.value,
+    presetTimeline: presetTimeline.value,
+    exportSettings: exportSettings.value,
+  })
 }
 </script>
 
