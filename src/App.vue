@@ -52,6 +52,29 @@
           </div>
         </div>
 
+        <!-- Timeline — waveform scrubber, trim handles, cue markers -->
+        <TimelineEditor
+          v-if="audioBuffer && peaks"
+          :peaks="peaks"
+          :preset-timeline="presetTimeline"
+          :selected-cue-index="selectedCueIndex"
+          :clip-start="clipStart"
+          :clip-end="effectiveClipEnd"
+          :duration="audioBuffer.duration"
+          :is-playing="isPlaying"
+          :get-current-time="getCurrentTime"
+          :playhead-time="playheadTime"
+          @update:clip-start="clipStart = $event"
+          @update:clip-end="clipEnd = $event"
+          @update:selected-cue-index="selectedCueIndex = $event"
+          @update:preset-timeline="onTimelineUpdateTimeline"
+          @seek="onTimelineSeek"
+          @play="play(playheadTime)"
+          @pause="stop()"
+          @add-cue="onTimelineAddCue"
+          @delete-cue="onTimelineDeleteCue"
+        />
+
         <aside class="controls-panel">
           <div class="file-info">
             <span class="file-name">{{ audioFile.name }}</span>
@@ -59,23 +82,12 @@
               v-if="audioBuffer"
               class="file-duration"
             >{{ audioBuffer.duration.toFixed(1) }}s</span>
-          </div>
-
-          <div class="playback-controls">
             <button
-              v-if="audioBuffer && !isLoading"
-              class="btn-secondary"
-              :aria-label="isPlaying ? 'Pause playback' : 'Play audio'"
-              @click="isPlaying ? stop() : play()"
-            >
-              {{ isPlaying ? 'Pause' : 'Play' }}
-            </button>
-            <button
-              class="btn-secondary"
+              class="btn-secondary btn-secondary--sm"
               aria-label="Remove audio file"
               @click="clearFile"
             >
-              Remove file
+              Remove
             </button>
           </div>
 
@@ -110,6 +122,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
+import TimelineEditor from './components/TimelineEditor.vue'
 import PresetSelector from './components/PresetSelector.vue'
 import ExportControls from './components/ExportControls.vue'
 import ExportButton from './components/ExportButton.vue'
@@ -171,6 +184,9 @@ const {
   loadFile,
   play,
   stop,
+  seekTo,
+  playheadTime,
+  getCurrentTime,
   dispose,
 } = useAudio()
 
@@ -235,6 +251,29 @@ function clearFile() {
   clipStart.value = 0
   clipEnd.value = null
   selectedCueIndex.value = 0
+}
+
+// ── Timeline event handlers ────────────────────────────────────────────────
+
+function onTimelineSeek(seconds) {
+  seekTo(seconds)
+}
+
+function onTimelineAddCue(seconds) {
+  const newCue = createPresetCue(DEFAULT_PRESET_NAME, seconds, 1.5)
+  const updated = [...presetTimeline.value, newCue].sort((a, b) => a.startTime - b.startTime)
+  presetTimeline.value = updated
+  selectedCueIndex.value = updated.indexOf(newCue)
+}
+
+function onTimelineDeleteCue(index) {
+  if (index === 0) return
+  presetTimeline.value = presetTimeline.value.filter((_, i) => i !== index)
+  selectedCueIndex.value = Math.min(selectedCueIndex.value, presetTimeline.value.length - 1)
+}
+
+function onTimelineUpdateTimeline(newTimeline) {
+  presetTimeline.value = newTimeline
 }
 
 function onExport() {
@@ -369,11 +408,10 @@ button {
   flex-shrink: 0;
 }
 
-.playback-controls {
-  display: flex;
-  gap: 8px;
+.btn-secondary--sm {
+  padding: 3px 10px;
+  font-size: 0.78rem;
 }
-
 
 .status-text {
   font-size: 0.85rem;

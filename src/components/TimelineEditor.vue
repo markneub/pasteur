@@ -1,0 +1,557 @@
+<template>
+  <div class="timeline-editor">
+    <!-- Control bar -->
+    <div class="timeline-controls">
+      <button
+        v-if="!isPlaying"
+        class="ctrl-btn"
+        aria-label="Play audio"
+        @click="emit('play')"
+      >
+        ▶
+      </button>
+      <button
+        v-else
+        class="ctrl-btn"
+        aria-label="Pause audio"
+        @click="emit('pause')"
+      >
+        ⏸
+      </button>
+
+      <span class="time-display">{{ formatTime(displayTime) }} / {{ formatTime(duration) }}</span>
+
+      <button
+        class="ctrl-btn ctrl-btn--sm"
+        aria-label="Add cue at current time"
+        @click="emit('add-cue', displayTime)"
+      >
+        + Cue
+      </button>
+
+      <button
+        v-if="selectedCueIndex > 0"
+        class="ctrl-btn ctrl-btn--sm ctrl-btn--danger"
+        aria-label="Delete selected cue"
+        @click="emit('delete-cue', selectedCueIndex)"
+      >
+        ✕ Cue
+      </button>
+
+      <span
+        v-if="selectedCueIndex > 0"
+        class="cue-label"
+        :style="{ color: cueColor(selectedCueIndex) }"
+      >
+        Cue {{ selectedCueIndex + 1 }}
+      </span>
+
+      <div class="zoom-controls">
+        <button
+          class="ctrl-btn ctrl-btn--sm"
+          aria-label="Zoom out"
+          :disabled="zoomLevel <= 1"
+          @click="zoomOut"
+        >
+          –
+        </button>
+        <span class="zoom-label">{{ zoomLevel > 1 ? zoomLevel + '×' : 'Fit' }}</span>
+        <button
+          class="ctrl-btn ctrl-btn--sm"
+          aria-label="Zoom in"
+          :disabled="zoomLevel >= 32"
+          @click="zoomIn"
+        >
+          +
+        </button>
+      </div>
+    </div>
+
+    <!-- Waveform canvas -->
+    <div
+      ref="containerEl"
+      class="timeline-canvas-wrapper"
+    >
+      <canvas
+        ref="canvasEl"
+        class="timeline-canvas"
+        :height="CANVAS_H"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @wheel.passive="onWheel"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+
+// ── Constants ──────────────────────────────────────────────────────────────
+
+const CANVAS_H = 88
+const TRIM_HIT_PX = 8   // pixels of tolerance for trim handle hit detection
+const CUE_HIT_PX = 8    // pixels of tolerance for cue marker hit detection
+const CUE_COLORS = ['#7c6af7', '#f7a06a', '#6af7a0', '#f76a6a', '#6ab4f7', '#f7e06a']
+const MIN_CLIP_GAP = 0.5 // minimum seconds between clipStart and clipEnd
+
+function cueColor(index) {
+  return CUE_COLORS[index % CUE_COLORS.length]
+}
+
+// ── Props & Emits ──────────────────────────────────────────────────────────
+
+const props = defineProps({
+  peaks: { type: Object, default: null },          // Float32Array | null
+  presetTimeline: { type: Array, default: () => [] },
+  selectedCueIndex: { type: Number, default: 0 },
+  clipStart: { type: Number, default: 0 },
+  clipEnd: { type: Number, default: 0 },
+  duration: { type: Number, default: 0 },
+  isPlaying: { type: Boolean, default: false },
+  getCurrentTime: { type: Function, required: true },
+  playheadTime: { type: Number, default: 0 },
+})
+
+const emit = defineEmits([
+  'update:clipStart',
+  'update:clipEnd',
+  'update:selectedCueIndex',
+  'update:presetTimeline',
+  'seek',
+  'play',
+  'pause',
+  'add-cue',
+  'delete-cue',
+])
+
+// ── Refs ───────────────────────────────────────────────────────────────────
+
+const containerEl = ref(null)
+const canvasEl = ref(null)
+
+// Zoom & pan
+const zoomLevel = ref(1)
+const zoomPan   = ref(0)   // seconds at left edge of visible window
+
+// Drag state
+let isDraggingLeft = false
+let isDraggingRight = false
+let isDraggingCue = null   // number | null (index)
+let isScrubbing = false
+
+// Displayed playhead time — updated in the draw loop
+const displayTime = ref(0)
+
+// rAF handle
+let animFrameId = null
+
+// ── Zoom helpers ───────────────────────────────────────────────────────────
+
+const visibleDuration = computed(() => {
+  if (props.duration <= 0) return 1
+  return props.duration / zoomLevel.value
+})
+
+const visibleStart = computed(() =>
+  Math.max(0, Math.min(zoomPan.value, props.duration - visibleDuration.value))
+)
+
+function clampPan(pan) {
+  return Math.max(0, Math.min(props.duration - visibleDuration.value, pan))
+}
+
+function zoomIn() {
+  const newLevel = Math.min(32, zoomLevel.value * 2)
+  const pivot = displayTime.value
+  zoomLevel.value = newLevel
+  // Re-center the visible window on the current playhead position
+  const newVD = props.duration / newLevel
+  zoomPan.value = clampPan(pivot - newVD / 2)
+}
+
+function zoomOut() {
+  const newLevel = Math.max(1, zoomLevel.value / 2)
+  zoomLevel.value = newLevel
+  if (newLevel === 1) {
+    zoomPan.value = 0
+  } else {
+    const newVD = props.duration / newLevel
+    zoomPan.value = clampPan(displayTime.value - newVD / 2)
+  }
+}
+
+// ── Coordinate helpers ─────────────────────────────────────────────────────
+
+function timeToX(t) {
+  if (!canvasEl.value || visibleDuration.value <= 0) return 0
+  return ((t - visibleStart.value) / visibleDuration.value) * canvasEl.value.width
+}
+
+function xToTime(x) {
+  if (!canvasEl.value || visibleDuration.value <= 0) return 0
+  return Math.max(0, Math.min(
+    props.duration,
+    visibleStart.value + (x / canvasEl.value.width) * visibleDuration.value
+  ))
+}
+
+// ── Time formatting ────────────────────────────────────────────────────────
+
+function formatTime(s) {
+  if (!isFinite(s) || s < 0) s = 0
+  const m = Math.floor(s / 60)
+  const sec = (s % 60).toFixed(1).padStart(4, '0')
+  return `${m}:${sec}`
+}
+
+// ── Canvas drawing ─────────────────────────────────────────────────────────
+
+function draw() {
+  const canvas = canvasEl.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const W = canvas.width
+  const H = CANVAS_H
+
+  // Update display time from live clock or stopped position
+  displayTime.value = props.isPlaying ? props.getCurrentTime() : props.playheadTime
+
+  ctx.clearRect(0, 0, W, H)
+
+  // 1. Waveform bars
+  drawWaveform(ctx, W, H)
+
+  // 2. Dim overlay for trimmed-out regions
+  drawTrimOverlay(ctx, W, H)
+
+  // 3. Cue markers
+  drawCueMarkers(ctx, H)
+
+  // 4. Trim handles (drawn after cues so they sit on top)
+  drawTrimHandles(ctx, H)
+
+  // 5. Playhead
+  drawPlayhead(ctx, H)
+}
+
+function drawWaveform(ctx, W, H) {
+  const peaks = props.peaks
+  if (!peaks || peaks.length === 0 || props.duration <= 0) return
+
+  const centerY = H / 2
+  const maxBarH = H * 0.42  // slightly under half so bars don't clip the edges
+
+  ctx.fillStyle = '#4a4a7a'
+
+  for (let px = 0; px < W; px++) {
+    // Map canvas pixel to a time, then to a peak index
+    const t = visibleStart.value + (px / W) * visibleDuration.value
+    const peakIdx = Math.floor((t / props.duration) * peaks.length)
+    if (peakIdx < 0 || peakIdx >= peaks.length) continue
+    const barH = Math.max(1, peaks[peakIdx] * maxBarH)
+    ctx.fillRect(px, centerY - barH, 1, barH * 2)
+  }
+}
+
+function drawTrimOverlay(ctx, W, H) {
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'
+  const leftEdge = timeToX(props.clipStart)
+  const rightEdge = timeToX(props.clipEnd)
+  // Left dim region
+  if (leftEdge > 0) ctx.fillRect(0, 0, leftEdge, H)
+  // Right dim region
+  if (rightEdge < W) ctx.fillRect(rightEdge, 0, W - rightEdge, H)
+}
+
+function drawCueMarkers(ctx, H) {
+  props.presetTimeline.forEach((cue, i) => {
+    const x = Math.round(timeToX(cue.startTime))
+    const color = cueColor(i)
+    const isSelected = i === props.selectedCueIndex
+
+    // Vertical line
+    ctx.strokeStyle = color
+    ctx.lineWidth = isSelected ? 2 : 1.5
+    ctx.globalAlpha = isSelected ? 1 : 0.75
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, H)
+    ctx.stroke()
+    ctx.globalAlpha = 1
+
+    // Selection pip — filled circle at top
+    if (isSelected) {
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(x, 6, 5, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  })
+}
+
+function drawTrimHandles(ctx, H) {
+  const leftX  = Math.round(timeToX(props.clipStart))
+  const rightX = Math.round(timeToX(props.clipEnd))
+
+  drawHandle(ctx, leftX, H)
+  drawHandle(ctx, rightX, H)
+}
+
+function drawHandle(ctx, x, H) {
+  const W = 6
+  const color = '#d0d0d0'
+
+  // Handle bar
+  ctx.fillStyle = color
+  ctx.fillRect(x - W / 2, 0, W, H)
+
+  // Grip lines
+  ctx.strokeStyle = '#555'
+  ctx.lineWidth = 1
+  const cx = x
+  const cy = H / 2
+  for (let dy = -4; dy <= 4; dy += 4) {
+    ctx.beginPath()
+    ctx.moveTo(cx - 1.5, cy + dy)
+    ctx.lineTo(cx + 1.5, cy + dy)
+    ctx.stroke()
+  }
+}
+
+function drawPlayhead(ctx, H) {
+  const x = timeToX(displayTime.value)
+  if (x < 0 || x > (canvasEl.value?.width ?? 0)) return
+  ctx.strokeStyle = '#ff4444'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(x, 0)
+  ctx.lineTo(x, H)
+  ctx.stroke()
+}
+
+// ── rAF loop ───────────────────────────────────────────────────────────────
+
+function loop() {
+  draw()
+  animFrameId = requestAnimationFrame(loop)
+}
+
+// ── Canvas resize ──────────────────────────────────────────────────────────
+
+let resizeObserver = null
+
+function setupResizeObserver() {
+  resizeObserver?.disconnect()
+  resizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry || !canvasEl.value) return
+    const { width } = entry.contentRect
+    if (width > 0) canvasEl.value.width = Math.round(width)
+  })
+  if (containerEl.value) resizeObserver.observe(containerEl.value)
+}
+
+// ── Pointer event handling ─────────────────────────────────────────────────
+
+function getOffsetX(e) {
+  return e.offsetX ?? (e.clientX - canvasEl.value.getBoundingClientRect().left)
+}
+
+function onPointerDown(e) {
+  if (!canvasEl.value) return
+  const x = getOffsetX(e)
+  const leftX  = timeToX(props.clipStart)
+  const rightX = timeToX(props.clipEnd)
+
+  // 1. Left trim handle
+  if (Math.abs(x - leftX) <= TRIM_HIT_PX) {
+    isDraggingLeft = true
+    canvasEl.value.setPointerCapture(e.pointerId)
+    return
+  }
+
+  // 2. Right trim handle
+  if (Math.abs(x - rightX) <= TRIM_HIT_PX) {
+    isDraggingRight = true
+    canvasEl.value.setPointerCapture(e.pointerId)
+    return
+  }
+
+  // 3. Cue markers (checked in reverse so later cues take priority when overlapping)
+  for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
+    const cueX = timeToX(props.presetTimeline[i].startTime)
+    if (Math.abs(x - cueX) <= CUE_HIT_PX) {
+      emit('update:selectedCueIndex', i)
+      if (i > 0) {
+        // Draggable cues (not cue[0])
+        isDraggingCue = i
+        canvasEl.value.setPointerCapture(e.pointerId)
+      }
+      return
+    }
+  }
+
+  // 4. Waveform scrubbing
+  isScrubbing = true
+  canvasEl.value.setPointerCapture(e.pointerId)
+  emit('seek', xToTime(x))
+}
+
+function onPointerMove(e) {
+  if (!canvasEl.value) return
+  const x = getOffsetX(e)
+  const t = xToTime(x)
+
+  if (isDraggingLeft) {
+    emit('update:clipStart', Math.max(0, Math.min(t, props.clipEnd - MIN_CLIP_GAP)))
+    return
+  }
+
+  if (isDraggingRight) {
+    emit('update:clipEnd', Math.max(props.clipStart + MIN_CLIP_GAP, Math.min(t, props.duration)))
+    return
+  }
+
+  if (isDraggingCue !== null) {
+    const timeline = props.presetTimeline
+    const prev = timeline[isDraggingCue - 1]
+    const next = timeline[isDraggingCue + 1]
+    const minT = prev ? prev.startTime + 0.1 : 0.1
+    const maxT = next ? next.startTime - 0.1 : props.duration
+    const newTime = Math.max(minT, Math.min(t, maxT))
+    const updated = timeline.map((c, i) =>
+      i === isDraggingCue ? { ...c, startTime: newTime } : c
+    )
+    emit('update:presetTimeline', updated)
+    return
+  }
+
+  if (isScrubbing) {
+    emit('seek', t)
+  }
+}
+
+function onPointerUp() {
+  isDraggingLeft  = false
+  isDraggingRight = false
+  isDraggingCue   = null
+  isScrubbing     = false
+}
+
+function onWheel(e) {
+  // Zoom on scroll (no modifier key required — the canvas is the zoom target)
+  if (e.deltaY === 0) return
+  if (e.deltaY < 0) {
+    zoomIn()
+  } else {
+    zoomOut()
+  }
+}
+
+// ── Lifecycle ──────────────────────────────────────────────────────────────
+
+onMounted(() => {
+  if (containerEl.value && canvasEl.value) {
+    canvasEl.value.width = containerEl.value.clientWidth || 300
+  }
+  setupResizeObserver()
+  animFrameId = requestAnimationFrame(loop)
+})
+
+onUnmounted(() => {
+  if (animFrameId !== null) cancelAnimationFrame(animFrameId)
+  resizeObserver?.disconnect()
+})
+</script>
+
+<style scoped>
+.timeline-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  user-select: none;
+}
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ctrl-btn {
+  background: transparent;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.ctrl-btn:hover:not(:disabled) {
+  border-color: #7c6af7;
+  color: #7c6af7;
+}
+
+.ctrl-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.ctrl-btn--sm {
+  padding: 3px 8px;
+  font-size: 0.78rem;
+}
+
+.ctrl-btn--danger:hover:not(:disabled) {
+  border-color: #e05c5c;
+  color: #e05c5c;
+}
+
+.time-display {
+  font-size: 0.82rem;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.cue-label {
+  font-size: 0.78rem;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.zoom-label {
+  font-size: 0.75rem;
+  color: #666;
+  min-width: 28px;
+  text-align: center;
+}
+
+.timeline-canvas-wrapper {
+  width: 100%;
+  background: #111;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.timeline-canvas {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+}
+</style>
