@@ -9,4 +9,12 @@ export default [
       'vue/multi-word-component-names': 'off',
     },
   },
+  {
+    files: ['**/__tests__/**/*.js', '**/*.test.js'],
+    languageOptions: {
+      globals: {
+        global: 'writable',
+      },
+    },
+  },
 ]

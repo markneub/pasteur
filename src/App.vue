@@ -20,12 +20,39 @@
           <!-- VisualizerPreview will go here -->
           <div class="visualizer-placeholder">
             <p>{{ audioFile.name }}</p>
-            <button
-              class="btn-secondary"
-              @click="clearFile"
+            <p
+              v-if="isLoading"
+              class="status-text"
             >
-              Remove file
-            </button>
+              Decoding audio…
+            </p>
+            <p
+              v-else-if="loadError"
+              class="status-text status-text--error"
+            >
+              {{ loadError }}
+            </p>
+            <p
+              v-else-if="audioBuffer"
+              class="status-text"
+            >
+              {{ isPlaying ? 'Playing' : 'Paused' }} · {{ audioBuffer.duration.toFixed(1) }}s
+            </p>
+            <div class="visualizer-actions">
+              <button
+                v-if="audioBuffer && !isLoading"
+                class="btn-secondary"
+                @click="isPlaying ? stop() : play()"
+              >
+                {{ isPlaying ? 'Pause' : 'Play' }}
+              </button>
+              <button
+                class="btn-secondary"
+                @click="clearFile"
+              >
+                Remove file
+              </button>
+            </div>
           </div>
         </div>
 
@@ -43,14 +70,19 @@
 <script setup>
 import { ref } from 'vue'
 import DropZone from './components/DropZone.vue'
+import { useAudio } from './composables/useAudio.js'
 
 const audioFile = ref(null)
+const { audioBuffer, isPlaying, isLoading, loadError, loadFile, play, stop, dispose } = useAudio()
 
-function onFileSelected(file) {
+async function onFileSelected(file) {
   audioFile.value = file
+  await loadFile(file)
+  play()
 }
 
 function clearFile() {
+  dispose()
   audioFile.value = null
 }
 </script>
@@ -149,5 +181,20 @@ button {
 .controls-placeholder {
   color: #555;
   font-size: 0.9rem;
+}
+
+.status-text {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.status-text--error {
+  color: #e05c5c;
+}
+
+.visualizer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 </style>
