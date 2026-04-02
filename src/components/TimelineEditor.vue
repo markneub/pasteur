@@ -240,7 +240,7 @@ function clampPan(pan) {
 
 function zoomIn() {
   const newLevel = Math.min(32, zoomLevel.value * 2)
-  const pivot = displayTime.value
+  const pivot = displayTime
   zoomLevel.value = newLevel
   // Re-center the visible window on the current playhead position
   const newVD = props.duration / newLevel
@@ -254,7 +254,7 @@ function zoomOut() {
     zoomPan.value = 0
   } else {
     const newVD = props.duration / newLevel
-    zoomPan.value = clampPan(displayTime.value - newVD / 2)
+    zoomPan.value = clampPan(displayTime - newVD / 2)
   }
 }
 
