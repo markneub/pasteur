@@ -19,8 +19,14 @@
         ⏸
       </button>
 
-      <span class="time-display">{{ formatTime(displayTime) }} / {{ formatTime(duration) }}</span>
-      <span class="clip-display">Clip: {{ formatTime(clipStart) }} – {{ formatTime(clipEnd) }} ({{ formatTime(clipEnd - clipStart) }})</span>
+      <span
+        ref="timeDisplayEl"
+        class="time-display"
+      />
+      <span
+        ref="clipDisplayEl"
+        class="clip-display"
+      />
 
       <button
         class="ctrl-btn ctrl-btn--sm"
@@ -205,8 +211,14 @@ let cueClickedIndex = null
 let cueClickedX = 0
 let currentPointerX = 0
 
-// Displayed playhead time — updated in the draw loop
-const displayTime = ref(0)
+// Displayed playhead time — plain variable, updated in draw() and written to DOM directly
+// (NOT a Vue ref — keeping it reactive would re-render the component 60×/sec and reset
+//  `:value` bindings on inputs while the user is typing in them)
+let displayTime = 0
+
+// DOM refs for time displays (updated directly to avoid re-renders)
+const timeDisplayEl = ref(null)
+const clipDisplayEl = ref(null)
 
 // rAF handle
 let animFrameId = null
@@ -285,7 +297,14 @@ function draw() {
   const TOTAL_H = CANVAS_H + FLAG_H
 
   // Update display time from live clock or stopped position
-  displayTime.value = props.isPlaying ? props.getCurrentTime() : props.playheadTime
+  displayTime = props.isPlaying ? props.getCurrentTime() : props.playheadTime
+  if (timeDisplayEl.value) {
+    timeDisplayEl.value.textContent = `${formatTime(displayTime)} / ${formatTime(props.duration)}`
+  }
+  if (clipDisplayEl.value) {
+    const cd = props.clipEnd - props.clipStart
+    clipDisplayEl.value.textContent = `Clip: ${formatTime(props.clipStart)} – ${formatTime(props.clipEnd)} (${formatTime(cd)})`
+  }
 
   ctx.clearRect(0, 0, W, TOTAL_H)
 
@@ -412,7 +431,7 @@ function drawHandle(ctx, x, H) {
 }
 
 function drawPlayhead(ctx, H) {
-  const x = timeToX(displayTime.value)
+  const x = timeToX(displayTime)
   if (x < 0 || x > (canvasEl.value?.width ?? 0)) return
   ctx.strokeStyle = '#ff4444'
   ctx.lineWidth = 1
@@ -637,7 +656,7 @@ watch(() => props.presetTimeline, (tl) => {
 // ── Cue add / popover action handlers ─────────────────────────────────────
 
 function onAddCue() {
-  const seconds = displayTime.value
+  const seconds = displayTime
   if (seconds <= props.clipStart) return
   const newCue = createPresetCue(DEFAULT_PRESET_NAME, seconds, 1.5)
   const updated = [...props.presetTimeline, newCue].sort((a, b) => a.startTime - b.startTime)
