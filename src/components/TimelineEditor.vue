@@ -5,9 +5,9 @@
       <button
         class="ctrl-btn"
         aria-label="Restart from clip start"
-        @click="emit('seek', props.clipStart); emit('pause')"
+        @click="emit('seek', props.clipStart); emit('play')"
       >
-        ⏮
+        ↺
       </button>
       <button
         v-if="!isPlaying"
