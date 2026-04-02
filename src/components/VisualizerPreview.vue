@@ -43,6 +43,10 @@ const props = defineProps({
     type: Number,
     default: 1.5,
   },
+  isPlaying: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const containerEl = ref(null)
@@ -86,6 +90,14 @@ watch(() => props.audioNode, (newNode, oldNode) => {
 
 watch(() => props.preset, (preset) => {
   if (preset) loadPreset(preset, props.transitionDuration)
+})
+
+watch(() => props.isPlaying, (playing) => {
+  if (playing) {
+    startRenderLoop()
+  } else {
+    stopRenderLoop()
+  }
 })
 
 function setupVisualizer() {

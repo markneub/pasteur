@@ -53,6 +53,7 @@
                 :audio-node="gainNode"
                 :preset="activePreset"
                 :transition-duration="activeTransitionDuration"
+                :is-playing="isPlaying"
               />
               <div
                 v-else-if="isLoading"
