@@ -573,7 +573,9 @@ function onPointerMove(e) {
   }
 
   if (isDraggingRight) {
-    emit('update:clipEnd', Math.max(props.clipStart + MIN_CLIP_GAP, Math.min(t, props.duration)))
+    const newEnd = Math.max(props.clipStart + MIN_CLIP_GAP, Math.min(t, props.duration))
+    emit('update:clipEnd', newEnd)
+    if (displayTime > newEnd) emit('seek', props.clipStart)
     return
   }
 
