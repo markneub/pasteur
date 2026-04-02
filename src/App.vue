@@ -180,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
 import TimelineEditor from './components/TimelineEditor.vue'
@@ -339,12 +339,20 @@ watch([canExportMp4, canExportWebM], () => {
   }
 })
 
+// Fire the title animation after the render loop has started (next tick after play)
+async function maybeLaunchTitle() {
+  if (!showTitle.value || !titleText.value) return
+  await nextTick()
+  visualizerPreviewRef.value?.launchTitleAnim(titleText.value)
+}
+
 async function onFileSelected(file) {
   audioFile.value = file
   // Default title to filename without extension
   titleText.value = file.name.replace(/\.[^.]+$/, '')
   await loadFile(file)
   play()
+  maybeLaunchTitle()
 }
 
 async function onChangeFileInput(e) {
@@ -370,11 +378,11 @@ function clearFile() {
 // Play with clip loop bounds so audio loops between the trim handles
 function onTimelinePlay() {
   const offset = Math.max(playheadTime.value, clipStart.value)
-  // Show title anim when starting from the beginning of the clip
-  if (showTitle.value && titleText.value && offset <= clipStart.value + 0.1) {
-    visualizerPreviewRef.value?.launchTitleAnim(titleText.value)
-  }
   play(offset, clipStart.value, effectiveClipEnd.value)
+  // Show title when starting from (or very near) the beginning of the clip —
+  // called after play() so isPlaying is already set and the render loop is
+  // starting; nextTick ensures startRenderLoop() has run before we fire it.
+  if (offset <= clipStart.value + 0.1) maybeLaunchTitle()
 }
 
 // Seek while preserving loop-aware playback if audio was playing
