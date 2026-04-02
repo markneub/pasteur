@@ -264,7 +264,7 @@ watch(titleText, () => {
 const exportSettings = ref({
   width: 1920,
   height: 1080,
-  fps: 30,
+  fps: 60,
   format: 'mp4',
 })
 
