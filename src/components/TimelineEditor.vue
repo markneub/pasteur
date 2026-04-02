@@ -98,7 +98,7 @@
                   class="cue-pop-dot"
                   :style="{ background: cueColor(i) }"
                 />
-                <span class="cue-pop-title">{{ i === 0 ? 'Initial Preset' : `Cue ${i + 1}` }}</span>
+                <span class="cue-pop-title">{{ i === 0 ? 'Initial Preset' : `Cue ${i}` }}</span>
                 <span class="cue-pop-time">{{ formatTime(cue.startTime) }}</span>
               </div>
 
