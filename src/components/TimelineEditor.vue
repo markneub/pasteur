@@ -20,6 +20,7 @@
       </button>
 
       <span class="time-display">{{ formatTime(displayTime) }} / {{ formatTime(duration) }}</span>
+      <span class="clip-display">Clip: {{ formatTime(clipStart) }} – {{ formatTime(clipEnd) }} ({{ formatTime(clipEnd - clipStart) }})</span>
 
       <button
         class="ctrl-btn ctrl-btn--sm"
@@ -449,6 +450,10 @@ function getOffsetX(e) {
   return e.offsetX ?? (e.clientX - canvasEl.value.getBoundingClientRect().left)
 }
 
+function getOffsetY(e) {
+  return e.offsetY ?? (e.clientY - canvasEl.value.getBoundingClientRect().top)
+}
+
 function isNearTrimHandle(x) {
   return (
     Math.abs(x - timeToX(props.clipStart)) <= TRIM_HIT_PX ||
@@ -459,14 +464,35 @@ function isNearTrimHandle(x) {
 function onPointerDown(e) {
   if (!canvasEl.value) return
   const x = getOffsetX(e)
+  const y = getOffsetY(e)
   const leftX  = timeToX(props.clipStart)
   const rightX = timeToX(props.clipEnd)
 
-  // 1. Left trim handle
+  // 0. Flag tab zone (y >= CANVAS_H) — click always opens popover, no drag
+  if (y >= CANVAS_H) {
+    const FLAG_W = 22
+    for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
+      const cueX = timeToX(props.presetTimeline[i].startTime)
+      if (x >= cueX && x <= cueX + FLAG_W) {
+        cueClickedIndex = i
+        cueClickedX = x
+        currentPointerX = x
+        canvasEl.value.setPointerCapture(e.pointerId)
+        return
+      }
+    }
+    return // click in flag zone but not on a flag — do nothing
+  }
+
+  // 1. Left trim handle — also track cue[0] click so a short press opens its popover
   if (Math.abs(x - leftX) <= TRIM_HIT_PX) {
     isDraggingLeft = true
     canvasCursor.value = 'col-resize'
     canvasEl.value.setPointerCapture(e.pointerId)
+    // Cue[0] is always at clipStart; record it so onPointerUp can open its popover on click
+    cueClickedIndex = 0
+    cueClickedX = x
+    currentPointerX = x
     return
   }
 
@@ -587,15 +613,10 @@ function onWheel(e) {
   }
 }
 
-// Manage popover state when the timeline changes
-watch(() => props.presetTimeline, (tl, oldTl) => {
-  // Close popover if the cue it referred to was removed
+// Close popover if the cue it referred to was removed
+watch(() => props.presetTimeline, (tl) => {
   if (openCueIndex.value !== null && openCueIndex.value >= tl.length) {
     openCueIndex.value = null
-  }
-  // Auto-open α cue popover when audio first loads (timeline goes from empty → populated)
-  if (tl.length > 0 && (!oldTl || oldTl.length === 0)) {
-    openCueIndex.value = 0
   }
 })
 
@@ -640,6 +661,8 @@ onMounted(() => {
   }
   setupResizeObserver()
   animFrameId = requestAnimationFrame(loop)
+  // Open α cue popover immediately — component mounts only when audio is loaded
+  openCueIndex.value = 0
 })
 
 onUnmounted(() => {
@@ -701,6 +724,13 @@ onUnmounted(() => {
 .time-display {
   font-size: 0.82rem;
   color: #888;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.clip-display {
+  font-size: 0.78rem;
+  color: #666;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
