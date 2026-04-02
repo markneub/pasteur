@@ -15,7 +15,7 @@
         <button
           ref="triggerButtonEl"
           type="button"
-          class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           :aria-expanded="isOpen"
           aria-haspopup="listbox"
           @click="toggleOpen"
