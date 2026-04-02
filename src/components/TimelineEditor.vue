@@ -3,6 +3,13 @@
     <!-- Control bar -->
     <div class="timeline-controls">
       <button
+        class="ctrl-btn"
+        aria-label="Restart from clip start"
+        @click="emit('seek', props.clipStart); emit('pause')"
+      >
+        ⏮
+      </button>
+      <button
         v-if="!isPlaying"
         class="ctrl-btn"
         aria-label="Play audio"
