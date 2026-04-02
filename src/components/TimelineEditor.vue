@@ -114,13 +114,15 @@
                 @update:model-value="onCuePresetChange(i, $event)"
               />
 
-              <div class="cue-pop-field">
+              <div
+                v-if="i > 0"
+                class="cue-pop-field"
+              >
                 <Label class="cue-pop-label">Transition</Label>
                 <div class="cue-pop-input-row">
                   <input
                     type="number"
-                    :value="i === 0 ? 0 : cue.transitionDuration"
-                    :disabled="i === 0"
+                    :value="cue.transitionDuration"
                     min="0"
                     max="30"
                     step="0.1"
