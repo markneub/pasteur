@@ -604,6 +604,8 @@ body {
     top: 24px;
     max-height: calc(100vh - 120px);
     overflow-y: auto;
+    padding: 4px;
+    margin: -4px;
   }
 }
 </style>
