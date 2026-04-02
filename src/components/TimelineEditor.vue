@@ -24,7 +24,7 @@
       <button
         class="ctrl-btn ctrl-btn--sm"
         aria-label="Add cue at current time"
-        @click="emit('add-cue', displayTime)"
+        @click="onAddCue"
       >
         + Cue
       </button>
@@ -58,7 +58,7 @@
       <canvas
         ref="canvasEl"
         class="timeline-canvas"
-        :height="CANVAS_H"
+        :height="CANVAS_H + FLAG_H"
         :style="{ cursor: canvasCursor }"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
@@ -141,10 +141,12 @@ import PresetSelector from './PresetSelector.vue'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { createPresetCue, DEFAULT_PRESET_NAME } from '../utils/presets.js'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const CANVAS_H = 88
+const FLAG_H = 18        // height of flag tab zone below waveform
 const TRIM_HIT_PX = 8   // pixels of tolerance for trim handle hit detection
 const CUE_HIT_PX = 8    // pixels of tolerance for cue marker hit detection
 const CUE_COLORS = ['#7c6af7', '#f7a06a', '#6af7a0', '#f76a6a', '#6ab4f7', '#f7e06a']
@@ -174,7 +176,6 @@ const emit = defineEmits([
   'seek',
   'play',
   'pause',
-  'add-cue',
 ])
 
 // ── Refs ───────────────────────────────────────────────────────────────────
@@ -280,27 +281,27 @@ function draw() {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   const W = canvas.width
-  const H = CANVAS_H
+  const TOTAL_H = CANVAS_H + FLAG_H
 
   // Update display time from live clock or stopped position
   displayTime.value = props.isPlaying ? props.getCurrentTime() : props.playheadTime
 
-  ctx.clearRect(0, 0, W, H)
+  ctx.clearRect(0, 0, W, TOTAL_H)
 
-  // 1. Waveform bars
-  drawWaveform(ctx, W, H)
+  // 1. Waveform bars (waveform zone only)
+  drawWaveform(ctx, W, CANVAS_H)
 
-  // 2. Dim overlay for trimmed-out regions
-  drawTrimOverlay(ctx, W, H)
+  // 2. Dim overlay for trimmed-out regions (full height)
+  drawTrimOverlay(ctx, W, TOTAL_H)
 
-  // 3. Cue markers
-  drawCueMarkers(ctx, H)
+  // 3. Cue markers (handles its own heights via constants)
+  drawCueMarkers(ctx)
 
-  // 4. Trim handles (drawn after cues so they sit on top)
-  drawTrimHandles(ctx, H)
+  // 4. Trim handles (drawn after cues so they sit on top, waveform zone only)
+  drawTrimHandles(ctx, CANVAS_H)
 
-  // 5. Playhead
-  drawPlayhead(ctx, H)
+  // 5. Playhead (waveform zone only)
+  drawPlayhead(ctx, CANVAS_H)
 }
 
 function drawWaveform(ctx, W, H) {
@@ -332,29 +333,51 @@ function drawTrimOverlay(ctx, W, H) {
   if (rightEdge < W) ctx.fillRect(rightEdge, 0, W - rightEdge, H)
 }
 
-function drawCueMarkers(ctx, H) {
-  props.presetTimeline.forEach((cue, i) => {
-    const x = Math.round(timeToX(cue.startTime))
-    const color = cueColor(i)
-    const isSelected = i === openCueIndex.value
+function drawCueMarkers(ctx) {
+  const TOTAL_H = CANVAS_H + FLAG_H
+  const FLAG_W  = 22  // flag tab width
 
-    // Vertical line
+  // Pass 1: translucent transition duration rectangles (drawn behind lines)
+  props.presetTimeline.forEach((cue, i) => {
+    if (i === 0 || cue.transitionDuration <= 0) return
+    const x      = Math.round(timeToX(cue.startTime))
+    const endX   = Math.round(timeToX(cue.startTime + cue.transitionDuration))
+    const isOpen = i === openCueIndex.value
+    ctx.fillStyle   = cueColor(i)
+    ctx.globalAlpha = isOpen ? 0.28 : 0.15
+    ctx.fillRect(x, 0, endX - x, CANVAS_H)
+    ctx.globalAlpha = 1
+  })
+
+  // Pass 2: cue lines and flag tabs (drawn on top)
+  props.presetTimeline.forEach((cue, i) => {
+    const x      = Math.round(timeToX(cue.startTime))
+    const color  = cueColor(i)
+    const isOpen = i === openCueIndex.value
+    const label  = i === 0 ? 'α' : String(i)
+
+    // Vertical line — full height (extends into flag zone)
     ctx.strokeStyle = color
-    ctx.lineWidth = isSelected ? 2 : 1.5
-    ctx.globalAlpha = isSelected ? 1 : 0.75
+    ctx.lineWidth   = isOpen ? 2 : 1.5
+    ctx.globalAlpha = isOpen ? 1 : 0.75
     ctx.beginPath()
     ctx.moveTo(x, 0)
-    ctx.lineTo(x, H)
+    ctx.lineTo(x, TOTAL_H)
     ctx.stroke()
     ctx.globalAlpha = 1
 
-    // Selection pip — filled circle at top
-    if (isSelected) {
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.arc(x, 6, 5, 0, Math.PI * 2)
-      ctx.fill()
-    }
+    // Flag tab (filled rectangle extending right from line bottom)
+    ctx.fillStyle   = color
+    ctx.globalAlpha = isOpen ? 1 : 0.75
+    ctx.fillRect(x, CANVAS_H, FLAG_W, FLAG_H)
+    ctx.globalAlpha = 1
+
+    // Label text inside flag
+    ctx.fillStyle    = '#fff'
+    ctx.font         = 'bold 10px system-ui, sans-serif'
+    ctx.textAlign    = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(label, x + FLAG_W / 2, CANVAS_H + FLAG_H / 2)
   })
 }
 
@@ -455,7 +478,7 @@ function onPointerDown(e) {
     return
   }
 
-  // 3. Cue markers (checked in reverse so later cues take priority when overlapping)
+  // 3a. Cue lines (reverse order: later cues take priority when overlapping)
   for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
     const cueX = timeToX(props.presetTimeline[i].startTime)
     if (Math.abs(x - cueX) <= CUE_HIT_PX) {
@@ -465,6 +488,21 @@ function onPointerDown(e) {
       if (i > 0) {
         isDraggingCue = i
       }
+      canvasEl.value.setPointerCapture(e.pointerId)
+      return
+    }
+  }
+
+  // 3b. Transition duration rectangles (click-to-open popover, no drag)
+  for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
+    const cue = props.presetTimeline[i]
+    if (i === 0 || cue.transitionDuration <= 0) continue
+    const cueX = timeToX(cue.startTime)
+    const endX = timeToX(cue.startTime + cue.transitionDuration)
+    if (x >= cueX && x <= endX) {
+      cueClickedIndex = i
+      cueClickedX = x
+      currentPointerX = x
       canvasEl.value.setPointerCapture(e.pointerId)
       return
     }
@@ -549,12 +587,28 @@ function onWheel(e) {
   }
 }
 
-// Close popover if the cue it refers to was removed
-watch(() => props.presetTimeline, (tl) => {
+// Manage popover state when the timeline changes
+watch(() => props.presetTimeline, (tl, oldTl) => {
+  // Close popover if the cue it referred to was removed
   if (openCueIndex.value !== null && openCueIndex.value >= tl.length) {
     openCueIndex.value = null
   }
+  // Auto-open α cue popover when audio first loads (timeline goes from empty → populated)
+  if (tl.length > 0 && (!oldTl || oldTl.length === 0)) {
+    openCueIndex.value = 0
+  }
 })
+
+// ── Cue add / popover action handlers ─────────────────────────────────────
+
+function onAddCue() {
+  const seconds = displayTime.value
+  if (seconds <= props.clipStart) return
+  const newCue = createPresetCue(DEFAULT_PRESET_NAME, seconds, 1.5)
+  const updated = [...props.presetTimeline, newCue].sort((a, b) => a.startTime - b.startTime)
+  emit('update:presetTimeline', updated)
+  openCueIndex.value = updated.indexOf(newCue)
+}
 
 // ── Cue popover action handlers ────────────────────────────────────────────
 

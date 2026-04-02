@@ -80,7 +80,6 @@
               @seek="onTimelineSeek"
               @play="onTimelinePlay"
               @pause="stop()"
-              @add-cue="onTimelineAddCue"
             />
           </template>
         </div>
@@ -332,12 +331,6 @@ async function onTimelineSeek(seconds) {
   if (wasPlaying) await play(seconds, clipStart.value, effectiveClipEnd.value)
 }
 
-function onTimelineAddCue(seconds) {
-  if (seconds <= clipStart.value) return
-  const newCue = createPresetCue(DEFAULT_PRESET_NAME, seconds, 1.5)
-  const updated = [...presetTimeline.value, newCue].sort((a, b) => a.startTime - b.startTime)
-  presetTimeline.value = updated
-}
 
 function onTimelineUpdateTimeline(newTimeline) {
   presetTimeline.value = newTimeline
