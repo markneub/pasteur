@@ -102,10 +102,10 @@
               variant="outline"
               size="sm"
               :disabled="isExporting"
-              aria-label="Remove audio file"
+              aria-label="Change audio file"
               @click="clearFile"
             >
-              Remove
+              Change
             </Button>
           </div>
           <p
