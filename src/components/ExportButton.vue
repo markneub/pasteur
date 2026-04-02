@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-2.5">
     <!-- Estimated file size (idle only) -->
     <p
-      v-if="!isExporting && audioDuration > 0"
+      v-if="!isExporting && clipEnd > clipStart"
       class="text-xs text-muted-foreground"
     >
       Est. {{ estimatedSizeMb }} MB
@@ -68,7 +68,8 @@ const props = defineProps({
   renderProgress: { type: Number, default: 0 },   // 0–1
   exportError: { type: String, default: null },
   exportSettings: { type: Object, required: true },
-  audioDuration: { type: Number, default: 0 },
+  clipStart: { type: Number, default: 0 },
+  clipEnd: { type: Number, default: 0 },
   canExport: { type: Boolean, default: false },
 })
 
@@ -78,16 +79,14 @@ const formatLabel = computed(() =>
   props.exportSettings.format === 'webm' ? 'WebM' : 'MP4'
 )
 
-// Baseline: 8 Mbps at 1080p/30fps. Scale linearly with pixels-per-second.
-const REFERENCE_BITRATE = 8_000_000
-const REFERENCE_PIXELS_PER_SECOND = 1920 * 1080 * 30
-const AUDIO_BITRATE = 192_000
+// Fixed encoding bitrates used by useExporter (not scaled by resolution)
+const VIDEO_BITRATE = 8_000_000  // 8 Mbps
+const AUDIO_BITRATE = 192_000    // 192 kbps
 
 const estimatedSizeMb = computed(() => {
-  const { width, height, fps } = props.exportSettings
-  const pixelsPerSecond = width * height * fps
-  const videoBitrate = REFERENCE_BITRATE * (pixelsPerSecond / REFERENCE_PIXELS_PER_SECOND)
-  const totalBits = (videoBitrate + AUDIO_BITRATE) * props.audioDuration
+  const clipDuration = props.clipEnd - props.clipStart
+  if (clipDuration <= 0) return '0.0'
+  const totalBits = (VIDEO_BITRATE + AUDIO_BITRATE) * clipDuration
   return (totalBits / 8 / 1_000_000).toFixed(1)
 })
 
