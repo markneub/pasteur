@@ -1,9 +1,9 @@
 <template>
-  <div class="export-button">
+  <div class="flex flex-col gap-2.5">
     <!-- Estimated file size (idle only) -->
     <p
       v-if="!isExporting && audioDuration > 0"
-      class="est-size"
+      class="text-xs text-muted-foreground"
     >
       Est. {{ estimatedSizeMb }} MB
     </p>
@@ -11,58 +11,55 @@
     <!-- Error banner -->
     <p
       v-if="exportError"
-      class="export-error"
+      class="text-sm text-destructive"
     >
       {{ exportError }}
     </p>
 
     <!-- Progress area -->
     <template v-if="isExporting">
-      <div class="progress-label">
+      <div class="flex justify-between text-xs text-muted-foreground">
         <span>{{ phaseLabel }}</span>
-        <span class="progress-pct">{{ progressPct }}%</span>
+        <span class="tabular-nums">{{ progressPct }}%</span>
       </div>
-      <div
-        class="progress-track"
+      <Progress
+        :model-value="progressPct"
+        class="h-1.5"
         role="progressbar"
         :aria-label="phaseLabel"
         :aria-valuenow="progressPct"
         aria-valuemin="0"
         aria-valuemax="100"
-      >
-        <div
-          class="progress-fill"
-          :style="{ width: progressPct + '%' }"
-        />
-      </div>
+      />
     </template>
 
     <!-- Buttons -->
-    <div class="button-row">
-      <button
-        v-if="!isExporting"
-        class="btn-export"
-        :disabled="!canExport"
-        :aria-label="canExport ? `Export as ${formatLabel}` : `Export as ${formatLabel} (load an audio file first)`"
-        @click="emit('export')"
-      >
-        Export {{ formatLabel }}
-      </button>
+    <Button
+      v-if="!isExporting"
+      class="w-full"
+      :disabled="!canExport"
+      :aria-label="canExport ? `Export as ${formatLabel}` : `Export as ${formatLabel} (load an audio file first)`"
+      @click="emit('export')"
+    >
+      Export {{ formatLabel }}
+    </Button>
 
-      <button
-        v-if="isExporting"
-        class="btn-cancel"
-        aria-label="Cancel export"
-        @click="emit('cancel')"
-      >
-        Cancel
-      </button>
-    </div>
+    <Button
+      v-if="isExporting"
+      variant="outline"
+      class="w-full"
+      aria-label="Cancel export"
+      @click="emit('cancel')"
+    >
+      Cancel
+    </Button>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 
 const props = defineProps({
   isExporting: { type: Boolean, default: false },
@@ -71,8 +68,7 @@ const props = defineProps({
   renderProgress: { type: Number, default: 0 },   // 0–1
   exportError: { type: String, default: null },
   exportSettings: { type: Object, required: true },
-  // shape: { width, height, fps, format }
-  audioDuration: { type: Number, default: 0 }, // seconds
+  audioDuration: { type: Number, default: 0 },
   canExport: { type: Boolean, default: false },
 })
 
@@ -109,89 +105,3 @@ const progressPct = computed(() => {
   return Math.round(raw * 100)
 })
 </script>
-
-<style scoped>
-.export-button {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.est-size {
-  font-size: 0.78rem;
-  color: #555;
-}
-
-.export-error {
-  font-size: 0.82rem;
-  color: #e05c5c;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: #888;
-}
-
-.progress-pct {
-  font-variant-numeric: tabular-nums;
-}
-
-.progress-track {
-  height: 4px;
-  background: #222;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #7c6af7;
-  border-radius: 2px;
-  transition: width 0.15s ease;
-}
-
-.button-row {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-export {
-  background: #7c6af7;
-  border: none;
-  color: #fff;
-  padding: 8px 20px;
-  border-radius: 6px;
-  font-size: 0.88rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
-}
-
-.btn-export:hover:not(:disabled) {
-  background: #9585f9;
-}
-
-.btn-export:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.btn-cancel {
-  background: transparent;
-  border: 1px solid #555;
-  color: #aaa;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.88rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-.btn-cancel:hover {
-  border-color: #e05c5c;
-  color: #e05c5c;
-}
-</style>

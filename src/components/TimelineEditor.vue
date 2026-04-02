@@ -29,23 +29,6 @@
         + Cue
       </button>
 
-      <button
-        v-if="selectedCueIndex > 0"
-        class="ctrl-btn ctrl-btn--sm ctrl-btn--danger"
-        aria-label="Delete selected cue"
-        @click="emit('delete-cue', selectedCueIndex)"
-      >
-        ✕ Cue
-      </button>
-
-      <span
-        v-if="selectedCueIndex > 0"
-        class="cue-label"
-        :style="{ color: cueColor(selectedCueIndex) }"
-      >
-        Cue {{ selectedCueIndex + 1 }}
-      </span>
-
       <div class="zoom-controls">
         <button
           class="ctrl-btn ctrl-btn--sm"
@@ -76,18 +59,88 @@
         ref="canvasEl"
         class="timeline-canvas"
         :height="CANVAS_H"
+        :style="{ cursor: canvasCursor }"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
+        @pointerleave="onPointerLeave"
         @wheel.passive="onWheel"
       />
+
+      <!-- Popover anchor overlay — pointer-events: none so canvas still receives events -->
+      <div class="cue-popover-overlay">
+        <template
+          v-for="(cue, i) in presetTimeline"
+          :key="i"
+        >
+          <Popover
+            :open="openCueIndex === i"
+            @update:open="(val) => { if (!val) openCueIndex = null }"
+          >
+            <PopoverAnchor
+              class="cue-anchor"
+              :style="{ left: cueXPercent(cue) + '%' }"
+            />
+            <PopoverContent
+              side="top"
+              :side-offset="12"
+              @pointerdown.stop
+            >
+              <div class="cue-pop-header">
+                <span
+                  class="cue-pop-dot"
+                  :style="{ background: cueColor(i) }"
+                />
+                <span class="cue-pop-title">{{ i === 0 ? 'Initial Preset' : `Cue ${i + 1}` }}</span>
+                <span class="cue-pop-time">{{ formatTime(cue.startTime) }}</span>
+              </div>
+
+              <PresetSelector
+                :model-value="cue.presetName"
+                @update:model-value="onCuePresetChange(i, $event)"
+              />
+
+              <div class="cue-pop-field">
+                <Label class="cue-pop-label">Transition</Label>
+                <div class="cue-pop-input-row">
+                  <input
+                    type="number"
+                    :value="i === 0 ? 0 : cue.transitionDuration"
+                    :disabled="i === 0"
+                    min="0"
+                    max="30"
+                    step="0.1"
+                    class="cue-duration-input"
+                    @change="onCueTransitionChange(i, $event.target.value)"
+                  >
+                  <span class="cue-pop-unit">s</span>
+                </div>
+              </div>
+
+              <Button
+                v-if="i > 0"
+                variant="destructive"
+                size="sm"
+                class="w-full mt-3"
+                @click="onDeleteCue(i)"
+              >
+                Delete Cue
+              </Button>
+            </PopoverContent>
+          </Popover>
+        </template>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import PresetSelector from './PresetSelector.vue'
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -106,7 +159,6 @@ function cueColor(index) {
 const props = defineProps({
   peaks: { type: Object, default: null },          // Float32Array | null
   presetTimeline: { type: Array, default: () => [] },
-  selectedCueIndex: { type: Number, default: 0 },
   clipStart: { type: Number, default: 0 },
   clipEnd: { type: Number, default: 0 },
   duration: { type: Number, default: 0 },
@@ -118,13 +170,11 @@ const props = defineProps({
 const emit = defineEmits([
   'update:clipStart',
   'update:clipEnd',
-  'update:selectedCueIndex',
   'update:presetTimeline',
   'seek',
   'play',
   'pause',
   'add-cue',
-  'delete-cue',
 ])
 
 // ── Refs ───────────────────────────────────────────────────────────────────
@@ -141,6 +191,17 @@ let isDraggingLeft = false
 let isDraggingRight = false
 let isDraggingCue = null   // number | null (index)
 let isScrubbing = false
+
+// Canvas cursor — changes to col-resize when near a trim handle
+const canvasCursor = ref('crosshair')
+
+// Popover state: which cue index has its popover open (null = none)
+const openCueIndex = ref(null)
+
+// Click vs drag detection for cue markers
+let cueClickedIndex = null
+let cueClickedX = 0
+let currentPointerX = 0
 
 // Displayed playhead time — updated in the draw loop
 const displayTime = ref(0)
@@ -207,6 +268,11 @@ function formatTime(s) {
   return `${m}:${sec}`
 }
 
+function cueXPercent(cue) {
+  if (visibleDuration.value <= 0) return 0
+  return ((cue.startTime - visibleStart.value) / visibleDuration.value) * 100
+}
+
 // ── Canvas drawing ─────────────────────────────────────────────────────────
 
 function draw() {
@@ -270,7 +336,7 @@ function drawCueMarkers(ctx, H) {
   props.presetTimeline.forEach((cue, i) => {
     const x = Math.round(timeToX(cue.startTime))
     const color = cueColor(i)
-    const isSelected = i === props.selectedCueIndex
+    const isSelected = i === openCueIndex.value
 
     // Vertical line
     ctx.strokeStyle = color
@@ -360,6 +426,13 @@ function getOffsetX(e) {
   return e.offsetX ?? (e.clientX - canvasEl.value.getBoundingClientRect().left)
 }
 
+function isNearTrimHandle(x) {
+  return (
+    Math.abs(x - timeToX(props.clipStart)) <= TRIM_HIT_PX ||
+    Math.abs(x - timeToX(props.clipEnd)) <= TRIM_HIT_PX
+  )
+}
+
 function onPointerDown(e) {
   if (!canvasEl.value) return
   const x = getOffsetX(e)
@@ -369,6 +442,7 @@ function onPointerDown(e) {
   // 1. Left trim handle
   if (Math.abs(x - leftX) <= TRIM_HIT_PX) {
     isDraggingLeft = true
+    canvasCursor.value = 'col-resize'
     canvasEl.value.setPointerCapture(e.pointerId)
     return
   }
@@ -376,6 +450,7 @@ function onPointerDown(e) {
   // 2. Right trim handle
   if (Math.abs(x - rightX) <= TRIM_HIT_PX) {
     isDraggingRight = true
+    canvasCursor.value = 'col-resize'
     canvasEl.value.setPointerCapture(e.pointerId)
     return
   }
@@ -384,12 +459,13 @@ function onPointerDown(e) {
   for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
     const cueX = timeToX(props.presetTimeline[i].startTime)
     if (Math.abs(x - cueX) <= CUE_HIT_PX) {
-      emit('update:selectedCueIndex', i)
+      cueClickedIndex = i
+      cueClickedX = x
+      currentPointerX = x
       if (i > 0) {
-        // Draggable cues (not cue[0])
         isDraggingCue = i
-        canvasEl.value.setPointerCapture(e.pointerId)
       }
+      canvasEl.value.setPointerCapture(e.pointerId)
       return
     }
   }
@@ -404,9 +480,12 @@ function onPointerMove(e) {
   if (!canvasEl.value) return
   const x = getOffsetX(e)
   const t = xToTime(x)
+  currentPointerX = x
 
   if (isDraggingLeft) {
-    emit('update:clipStart', Math.max(0, Math.min(t, props.clipEnd - MIN_CLIP_GAP)))
+    const newStart = Math.max(0, Math.min(t, props.clipEnd - MIN_CLIP_GAP))
+    emit('update:clipStart', newStart)
+    emit('seek', newStart) // Seek preview to new start immediately
     return
   }
 
@@ -419,7 +498,7 @@ function onPointerMove(e) {
     const timeline = props.presetTimeline
     const prev = timeline[isDraggingCue - 1]
     const next = timeline[isDraggingCue + 1]
-    const minT = prev ? prev.startTime + 0.1 : 0.1
+    const minT = Math.max(props.clipStart + 0.01, prev ? prev.startTime + 0.1 : props.clipStart + 0.01)
     const maxT = next ? next.startTime - 0.1 : props.duration
     const newTime = Math.max(minT, Math.min(t, maxT))
     const updated = timeline.map((c, i) =>
@@ -431,14 +510,33 @@ function onPointerMove(e) {
 
   if (isScrubbing) {
     emit('seek', t)
+    return
   }
+
+  // Hover — update cursor based on proximity to trim handles
+  canvasCursor.value = isNearTrimHandle(x) ? 'col-resize' : 'crosshair'
 }
 
 function onPointerUp() {
+  // Detect click (small movement) on a cue marker → toggle popover
+  if (cueClickedIndex !== null) {
+    if (Math.abs(currentPointerX - cueClickedX) < 4) {
+      openCueIndex.value = openCueIndex.value === cueClickedIndex ? null : cueClickedIndex
+    }
+    cueClickedIndex = null
+  }
+
   isDraggingLeft  = false
   isDraggingRight = false
   isDraggingCue   = null
   isScrubbing     = false
+  canvasCursor.value = 'crosshair'
+}
+
+function onPointerLeave() {
+  if (!isDraggingLeft && !isDraggingRight) {
+    canvasCursor.value = 'crosshair'
+  }
 }
 
 function onWheel(e) {
@@ -449,6 +547,35 @@ function onWheel(e) {
   } else {
     zoomOut()
   }
+}
+
+// Close popover if the cue it refers to was removed
+watch(() => props.presetTimeline, (tl) => {
+  if (openCueIndex.value !== null && openCueIndex.value >= tl.length) {
+    openCueIndex.value = null
+  }
+})
+
+// ── Cue popover action handlers ────────────────────────────────────────────
+
+function onCuePresetChange(index, name) {
+  emit('update:presetTimeline',
+    props.presetTimeline.map((c, i) => i === index ? { ...c, presetName: name } : c)
+  )
+}
+
+function onCueTransitionChange(index, val) {
+  emit('update:presetTimeline',
+    props.presetTimeline.map((c, i) =>
+      i === index ? { ...c, transitionDuration: Math.max(0, parseFloat(val) || 0) } : c
+    )
+  )
+}
+
+function onDeleteCue(index) {
+  if (index === 0) return
+  openCueIndex.value = null
+  emit('update:presetTimeline', props.presetTimeline.filter((_, i) => i !== index))
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -543,15 +670,106 @@ onUnmounted(() => {
 }
 
 .timeline-canvas-wrapper {
+  position: relative;
   width: 100%;
   background: #111;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .timeline-canvas {
   display: block;
   width: 100%;
-  cursor: crosshair;
+  border-radius: 6px;
+}
+
+/* Popover overlay — sits over canvas but passes pointer events through */
+.cue-popover-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Invisible anchor div at cue position — used purely for popover placement */
+.cue-anchor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+/* Popover content layout */
+.cue-pop-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cue-pop-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cue-pop-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.cue-pop-time {
+  font-size: 0.78rem;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+.cue-pop-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cue-pop-label {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.cue-pop-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cue-duration-input {
+  width: 64px;
+  background: transparent;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  text-align: right;
+}
+
+.cue-duration-input:focus {
+  outline: none;
+  border-color: #7c6af7;
+}
+
+.cue-duration-input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cue-pop-unit {
+  font-size: 0.78rem;
+  color: #888;
 }
 </style>

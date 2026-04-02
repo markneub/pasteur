@@ -31,6 +31,8 @@ export function useExporter() {
   const exportPhase = ref(null) // 'analyzing' | 'rendering' | null
   const renderProgress = ref(0)
   const exportError = ref(null)
+  // JPEG data URL of the most recently rendered export frame (null when not exporting)
+  const exportPreviewUrl = ref(null)
 
   let cancelled = false
   let activeOutput = null
@@ -201,6 +203,10 @@ export function useExporter() {
 
         try {
           visualizer.render()
+          // Capture a preview frame every 10 frames for the UI preview
+          if (i % 10 === 0 || i === 0) {
+            try { exportPreviewUrl.value = hiddenCanvas.toDataURL('image/jpeg', 0.7) } catch { /* ignore */ }
+          }
         } catch (renderErr) {
           const msg = renderErr?.message ?? ''
           if (
@@ -277,6 +283,7 @@ export function useExporter() {
       isExporting.value = false
       exportPhase.value = null
       activeOutput = null
+      exportPreviewUrl.value = null
     }
   }
 
@@ -296,5 +303,6 @@ export function useExporter() {
     analysisProgress,
     renderProgress,
     exportError,
+    exportPreviewUrl,
   }
 }

@@ -1,36 +1,41 @@
 <template>
-  <div class="export-controls">
-    <!-- Output Size -->
-    <div class="control-group">
-      <label class="control-label">Output size</label>
-      <div class="button-row">
-        <button
+  <div class="flex flex-col gap-5">
+    <!-- Output size -->
+    <div class="flex flex-col gap-2">
+      <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+        Output size
+      </Label>
+      <ToggleGroup
+        type="single"
+        class="flex-wrap justify-start gap-1.5"
+        :model-value="activeSizePreset"
+        @update:model-value="onSizeChange"
+      >
+        <ToggleGroupItem
           v-for="preset in SIZE_PRESETS"
           :key="preset.label"
-          class="toggle-btn"
-          :class="{ 'toggle-btn--active': activeSizePreset === preset.label }"
+          :value="preset.label"
+          variant="outline"
+          size="sm"
           :aria-label="`${preset.label} (${preset.width}×${preset.height})`"
-          :aria-pressed="activeSizePreset === preset.label"
-          @click="selectSizePreset(preset)"
         >
           {{ preset.label }}
-        </button>
-        <button
-          class="toggle-btn"
-          :class="{ 'toggle-btn--active': activeSizePreset === 'Custom' }"
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="Custom"
+          variant="outline"
+          size="sm"
           aria-label="Custom resolution"
-          :aria-pressed="activeSizePreset === 'Custom'"
-          @click="selectCustomSize"
         >
           Custom
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
       <div
         v-if="activeSizePreset === 'Custom'"
-        class="custom-size"
+        class="flex items-center gap-2"
       >
         <input
-          class="custom-size__input"
+          class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           type="number"
           min="1"
           max="7680"
@@ -39,9 +44,9 @@
           :value="modelValue.width"
           @change="onCustomWidth"
         >
-        <span class="custom-size__sep">×</span>
+        <span class="text-sm text-muted-foreground">×</span>
         <input
-          class="custom-size__input"
+          class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           type="number"
           min="1"
           max="4320"
@@ -50,52 +55,66 @@
           :value="modelValue.height"
           @change="onCustomHeight"
         >
-        <span class="custom-size__unit">px</span>
+        <span class="text-sm text-muted-foreground">px</span>
       </div>
     </div>
 
-    <!-- FPS -->
-    <div class="control-group">
-      <label class="control-label">Frame rate</label>
-      <div class="button-row">
-        <button
+    <!-- Frame rate -->
+    <div class="flex flex-col gap-2">
+      <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+        Frame rate
+      </Label>
+      <ToggleGroup
+        type="single"
+        class="flex-wrap justify-start gap-1.5"
+        :model-value="String(modelValue.fps)"
+        @update:model-value="onFpsChange"
+      >
+        <ToggleGroupItem
           v-for="fps in FPS_OPTIONS"
           :key="fps"
-          class="toggle-btn"
-          :class="{ 'toggle-btn--active': modelValue.fps === fps }"
+          :value="String(fps)"
+          variant="outline"
+          size="sm"
           :aria-label="`${fps} frames per second`"
-          :aria-pressed="modelValue.fps === fps"
-          @click="emit('update:modelValue', { ...modelValue, fps })"
         >
           {{ fps }}
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
 
     <!-- Format -->
-    <div class="control-group">
-      <label class="control-label">Format</label>
-      <div class="button-row">
-        <button
+    <div class="flex flex-col gap-2">
+      <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+        Format
+      </Label>
+      <ToggleGroup
+        type="single"
+        class="flex-wrap justify-start gap-1.5"
+        :model-value="modelValue.format"
+        @update:model-value="onFormatChange"
+      >
+        <ToggleGroupItem
           v-for="fmt in FORMAT_OPTIONS"
           :key="fmt.value"
-          class="toggle-btn"
-          :class="{ 'toggle-btn--active': modelValue.format === fmt.value }"
+          :value="fmt.value"
+          variant="outline"
+          size="sm"
           :disabled="!formatSupport[fmt.value]"
-          :aria-pressed="modelValue.format === fmt.value"
           :aria-label="formatSupport[fmt.value] ? fmt.label : `${fmt.label} (not supported in this browser)`"
           :title="formatSupport[fmt.value] ? undefined : `${fmt.label} encoding is not supported in this browser`"
-          @click="formatSupport[fmt.value] && emit('update:modelValue', { ...modelValue, format: fmt.value })"
         >
           {{ fmt.label }}
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { Label } from '@/components/ui/label'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 const SIZE_PRESETS = [
   { label: '4K',    width: 3840, height: 2160 },
@@ -135,13 +154,24 @@ const activeSizePreset = computed(() => {
   return match ? match.label : 'Custom'
 })
 
-function selectSizePreset(preset) {
-  emit('update:modelValue', { ...props.modelValue, width: preset.width, height: preset.height })
+function onSizeChange(val) {
+  if (!val) return
+  if (val === 'Custom') {
+    emit('update:modelValue', { ...props.modelValue })
+  } else {
+    const preset = SIZE_PRESETS.find(p => p.label === val)
+    if (preset) emit('update:modelValue', { ...props.modelValue, width: preset.width, height: preset.height })
+  }
 }
 
-function selectCustomSize() {
-  // Switch to custom mode; keep current dimensions so the inputs are pre-filled
-  emit('update:modelValue', { ...props.modelValue })
+function onFpsChange(val) {
+  if (!val) return
+  emit('update:modelValue', { ...props.modelValue, fps: Number(val) })
+}
+
+function onFormatChange(val) {
+  if (!val || !formatSupport.value[val]) return
+  emit('update:modelValue', { ...props.modelValue, format: val })
 }
 
 function onCustomWidth(event) {
@@ -154,90 +184,3 @@ function onCustomHeight(event) {
   emit('update:modelValue', { ...props.modelValue, height })
 }
 </script>
-
-<style scoped>
-.export-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.control-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #888;
-}
-
-.button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.toggle-btn {
-  background: transparent;
-  border: 1px solid #333;
-  color: #aaa;
-  padding: 5px 12px;
-  border-radius: 5px;
-  font-size: 0.82rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-
-.toggle-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.toggle-btn:hover {
-  border-color: #666;
-  color: #ddd;
-}
-
-.toggle-btn--active {
-  border-color: #7c6af7;
-  color: #7c6af7;
-  background: rgba(124, 106, 247, 0.1);
-}
-
-.custom-size {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.custom-size__input {
-  width: 90px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #ddd;
-  padding: 5px 8px;
-  border-radius: 5px;
-  font-size: 0.85rem;
-  font-family: inherit;
-}
-
-.custom-size__input:focus {
-  outline: none;
-  border-color: #7c6af7;
-}
-
-.custom-size__sep {
-  color: #555;
-}
-
-.custom-size__unit {
-  color: #555;
-  font-size: 0.8rem;
-}
-</style>

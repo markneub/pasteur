@@ -19,79 +19,104 @@
     </div>
 
     <main class="app-main">
-      <DropZone
-        v-if="!audioFile"
-        @file-selected="onFileSelected"
-      />
-
-      <template v-else>
-        <div class="visualizer-area">
-          <VisualizerPreview
-            v-if="audioContext && gainNode"
-            ref="visualizerPreviewRef"
-            :audio-context="audioContext"
-            :audio-node="gainNode"
-            :preset="activePreset"
-            :transition-duration="activeTransitionDuration"
+      <div class="content-layout">
+        <!-- Left column: preview + timeline -->
+        <div class="preview-column">
+          <DropZone
+            v-if="!audioFile"
+            class="preview-drop-zone"
+            @file-selected="onFileSelected"
           />
-          <div
-            v-else-if="isLoading"
-            class="visualizer-placeholder"
-          >
-            <p class="status-text">
-              Decoding audio…
-            </p>
-          </div>
-          <div
-            v-else-if="loadError"
-            class="visualizer-placeholder"
-          >
-            <p class="status-text status-text--error">
-              {{ loadError }}
-            </p>
-          </div>
+
+          <template v-else>
+            <div class="visualizer-area">
+              <!-- During export: show the currently rendered export frame -->
+              <img
+                v-if="isExporting && exportPreviewUrl"
+                class="export-preview"
+                :src="exportPreviewUrl"
+                alt="Export preview"
+              >
+              <VisualizerPreview
+                v-else-if="audioContext && gainNode"
+                ref="visualizerPreviewRef"
+                :audio-context="audioContext"
+                :audio-node="gainNode"
+                :preset="activePreset"
+                :transition-duration="activeTransitionDuration"
+              />
+              <div
+                v-else-if="isLoading"
+                class="visualizer-placeholder"
+              >
+                <p class="status-text">
+                  Decoding audio…
+                </p>
+              </div>
+              <div
+                v-else-if="loadError"
+                class="visualizer-placeholder"
+              >
+                <p class="status-text status-text--error">
+                  {{ loadError }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Timeline — waveform scrubber, trim handles, cue markers -->
+            <TimelineEditor
+              v-if="audioBuffer && peaks"
+              :peaks="peaks"
+              :preset-timeline="presetTimeline"
+              :clip-start="clipStart"
+              :clip-end="effectiveClipEnd"
+              :duration="audioBuffer.duration"
+              :is-playing="isPlaying"
+              :get-current-time="getCurrentTime"
+              :playhead-time="playheadTime"
+              @update:clip-start="clipStart = $event"
+              @update:clip-end="clipEnd = $event"
+              @update:preset-timeline="onTimelineUpdateTimeline"
+              @seek="onTimelineSeek"
+              @play="onTimelinePlay"
+              @pause="stop()"
+              @add-cue="onTimelineAddCue"
+            />
+          </template>
         </div>
 
-        <!-- Timeline — waveform scrubber, trim handles, cue markers -->
-        <TimelineEditor
-          v-if="audioBuffer && peaks"
-          :peaks="peaks"
-          :preset-timeline="presetTimeline"
-          :selected-cue-index="selectedCueIndex"
-          :clip-start="clipStart"
-          :clip-end="effectiveClipEnd"
-          :duration="audioBuffer.duration"
-          :is-playing="isPlaying"
-          :get-current-time="getCurrentTime"
-          :playhead-time="playheadTime"
-          @update:clip-start="clipStart = $event"
-          @update:clip-end="clipEnd = $event"
-          @update:selected-cue-index="selectedCueIndex = $event"
-          @update:preset-timeline="onTimelineUpdateTimeline"
-          @seek="onTimelineSeek"
-          @play="play(playheadTime)"
-          @pause="stop()"
-          @add-cue="onTimelineAddCue"
-          @delete-cue="onTimelineDeleteCue"
-        />
-
-        <aside class="controls-panel">
-          <div class="file-info">
+        <!-- Right column: settings panel (always rendered) -->
+        <aside
+          class="controls-panel"
+          :inert="!audioFile || undefined"
+        >
+          <div
+            v-if="audioFile"
+            class="file-info"
+          >
             <span class="file-name">{{ audioFile.name }}</span>
             <span
               v-if="audioBuffer"
               class="file-duration"
             >{{ audioBuffer.duration.toFixed(1) }}s</span>
-            <button
-              class="btn-secondary btn-secondary--sm"
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="isExporting"
               aria-label="Remove audio file"
               @click="clearFile"
             >
               Remove
-            </button>
+            </Button>
           </div>
+          <p
+            v-else
+            class="no-file-hint"
+          >
+            Load an audio file to get started
+          </p>
 
-          <PresetSelector v-model="selectedCuePresetName" />
+          <Separator />
 
           <ExportControls
             v-model="exportSettings"
@@ -99,6 +124,8 @@
             :can-export-mp4="canExportMp4"
             :can-export-web-m="canExportWebM"
           />
+
+          <Separator />
 
           <ExportButton
             :is-exporting="isExporting"
@@ -113,19 +140,20 @@
             @cancel="cancelExport"
           />
         </aside>
-      </template>
+      </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import DropZone from './components/DropZone.vue'
 import VisualizerPreview from './components/VisualizerPreview.vue'
 import TimelineEditor from './components/TimelineEditor.vue'
-import PresetSelector from './components/PresetSelector.vue'
 import ExportControls from './components/ExportControls.vue'
 import ExportButton from './components/ExportButton.vue'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { useAudio } from './composables/useAudio.js'
 import { useExporter } from './composables/useExporter.js'
 import { useBrowserSupport } from './composables/useBrowserSupport.js'
@@ -136,32 +164,43 @@ const audioFile = ref(null)
 const visualizerPreviewRef = ref(null)
 
 // --- Preset timeline ---
-const presetTimeline = ref([createPresetCue(DEFAULT_PRESET_NAME)])
+const presetTimeline = ref([createPresetCue(DEFAULT_PRESET_NAME, 0, 0)])
 
-// Index of the cue currently selected for editing via PresetSelector
-const selectedCueIndex = ref(0)
+// --- Playhead-driven active preset ---
+const liveActiveCueIndex = ref(0)
+let playbackRafId = null
 
-// The preset name bound to PresetSelector — edits the selected cue
-const selectedCuePresetName = computed({
-  get: () => presetTimeline.value[selectedCueIndex.value]?.presetName ?? DEFAULT_PRESET_NAME,
-  set: (name) => {
-    presetTimeline.value = presetTimeline.value.map((c, i) =>
-      i === selectedCueIndex.value ? { ...c, presetName: name } : c
-    )
-  },
+function getActiveCueIndexAtTime(t) {
+  let idx = 0
+  for (let i = 1; i < presetTimeline.value.length; i++) {
+    if (presetTimeline.value[i].startTime <= t) idx = i
+  }
+  return idx
+}
+
+// activePreset drives the VisualizerPreview — based on current playhead position
+const activePreset = computed(() => {
+  const cue = presetTimeline.value[liveActiveCueIndex.value] ?? presetTimeline.value[0]
+  return getPreset(cue?.presetName ?? DEFAULT_PRESET_NAME)
 })
 
-// activePreset drives the VisualizerPreview — shows the selected cue's preset
-const activePreset = computed(() => getPreset(selectedCuePresetName.value))
-
-const activeTransitionDuration = computed(() =>
-  presetTimeline.value[selectedCueIndex.value]?.transitionDuration ?? 1.5
-)
+// When stopped or at cue[0], use 0 transition (instant switch); during playback use cue's value
+const activeTransitionDuration = computed(() => {
+  if (!isPlaying.value || liveActiveCueIndex.value === 0) return 0
+  return presetTimeline.value[liveActiveCueIndex.value]?.transitionDuration ?? 1.5
+})
 
 // --- Clip trim state ---
 const clipStart = ref(0)
 const clipEnd = ref(null) // null = audioBuffer.duration
 const effectiveClipEnd = computed(() => clipEnd.value ?? audioBuffer.value?.duration ?? 0)
+
+// Sync cue[0].startTime to clipStart; also remove any cues that fall behind new clipStart
+watch(clipStart, (newStart) => {
+  presetTimeline.value = presetTimeline.value
+    .filter((c, i) => i === 0 || c.startTime > newStart)
+    .map((c, i) => i === 0 ? { ...c, startTime: newStart } : c)
+})
 
 // --- Waveform peaks ---
 const { peaks, computePeaks } = useWaveform()
@@ -184,11 +223,28 @@ const {
   loadFile,
   play,
   stop,
-  seekTo,
   playheadTime,
   getCurrentTime,
   dispose,
 } = useAudio()
+
+// During playback: rAF loop polls getCurrentTime() to track active cue
+watch(isPlaying, (playing) => {
+  if (playing) {
+    function tick() {
+      liveActiveCueIndex.value = getActiveCueIndexAtTime(getCurrentTime())
+      playbackRafId = requestAnimationFrame(tick)
+    }
+    tick()
+  } else {
+    if (playbackRafId) { cancelAnimationFrame(playbackRafId); playbackRafId = null }
+  }
+})
+
+// When stopped/seeking: sync liveActiveCueIndex to playheadTime
+watch(playheadTime, (t) => {
+  if (!isPlaying.value) liveActiveCueIndex.value = getActiveCueIndexAtTime(t)
+})
 
 // Compute peaks and reset clip/cue state when a new audio file is loaded
 watch(audioBuffer, (buf) => {
@@ -196,7 +252,8 @@ watch(audioBuffer, (buf) => {
     computePeaks(buf)
     clipStart.value = 0
     clipEnd.value = null
-    selectedCueIndex.value = 0
+    liveActiveCueIndex.value = 0
+    presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME, 0, 0)]
   } else {
     peaks.value = null
   }
@@ -210,6 +267,7 @@ const {
   analysisProgress,
   renderProgress,
   exportError,
+  exportPreviewUrl,
 } = useExporter()
 
 const {
@@ -220,6 +278,10 @@ const {
 } = useBrowserSupport()
 
 onMounted(checkCodecSupport)
+
+onUnmounted(() => {
+  if (playbackRafId) { cancelAnimationFrame(playbackRafId); playbackRafId = null }
+})
 
 // Whether the currently selected export format is supported in this browser
 const isSelectedFormatSupported = computed(() => {
@@ -245,40 +307,46 @@ async function onFileSelected(file) {
 }
 
 function clearFile() {
+  if (playbackRafId) { cancelAnimationFrame(playbackRafId); playbackRafId = null }
   dispose()
   audioFile.value = null
-  presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME)]
+  presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME, 0, 0)]
   clipStart.value = 0
   clipEnd.value = null
-  selectedCueIndex.value = 0
+  liveActiveCueIndex.value = 0
 }
 
 // ── Timeline event handlers ────────────────────────────────────────────────
 
-function onTimelineSeek(seconds) {
-  seekTo(seconds)
+// Play with clip loop bounds so audio loops between the trim handles
+function onTimelinePlay() {
+  const offset = Math.max(playheadTime.value, clipStart.value)
+  play(offset, clipStart.value, effectiveClipEnd.value)
+}
+
+// Seek while preserving loop-aware playback if audio was playing
+async function onTimelineSeek(seconds) {
+  const wasPlaying = isPlaying.value
+  stop()
+  playheadTime.value = seconds
+  if (wasPlaying) await play(seconds, clipStart.value, effectiveClipEnd.value)
 }
 
 function onTimelineAddCue(seconds) {
+  if (seconds <= clipStart.value) return
   const newCue = createPresetCue(DEFAULT_PRESET_NAME, seconds, 1.5)
   const updated = [...presetTimeline.value, newCue].sort((a, b) => a.startTime - b.startTime)
   presetTimeline.value = updated
-  selectedCueIndex.value = updated.indexOf(newCue)
-}
-
-function onTimelineDeleteCue(index) {
-  if (index === 0) return
-  presetTimeline.value = presetTimeline.value.filter((_, i) => i !== index)
-  selectedCueIndex.value = Math.min(selectedCueIndex.value, presetTimeline.value.length - 1)
 }
 
 function onTimelineUpdateTimeline(newTimeline) {
   presetTimeline.value = newTimeline
 }
 
-function onExport() {
+async function onExport() {
   if (!audioBuffer.value || !audioContext.value) return
-  startExport({
+  stop() // Stop audio playback before starting export
+  await startExport({
     audioBuffer: audioBuffer.value,
     audioContext: audioContext.value,
     presetTimeline: presetTimeline.value,
@@ -286,47 +354,26 @@ function onExport() {
     clipStart: clipStart.value,
     clipEnd: effectiveClipEnd.value,
   })
+  // After export finishes (success, error, or cancel): park playhead at clip start
+  playheadTime.value = clipStart.value
 }
 
 </script>
 
 <style>
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 body {
   background: #0a0a0a;
   color: #e0e0e0;
   font-family: system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
-
-button {
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.btn-secondary {
-  background: transparent;
-  border: 1px solid #444;
-  color: #ccc;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  transition: border-color 0.2s, color 0.2s;
-}
-
-.btn-secondary:hover {
-  border-color: #7c6af7;
-  color: #7c6af7;
-}
 </style>
 
 <style scoped>
 #app {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -361,9 +408,24 @@ button {
 .app-main {
   flex: 1;
   padding: 32px;
+}
+
+.content-layout {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.preview-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.preview-drop-zone {
+  aspect-ratio: 16 / 9;
+  min-height: 160px;
 }
 
 .visualizer-area {
@@ -382,10 +444,21 @@ button {
   justify-content: center;
 }
 
+.export-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .controls-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+}
+
+.controls-panel[inert] {
+  opacity: 0.4;
 }
 
 .file-info {
@@ -408,9 +481,10 @@ button {
   flex-shrink: 0;
 }
 
-.btn-secondary--sm {
-  padding: 3px 10px;
-  font-size: 0.78rem;
+.no-file-hint {
+  font-size: 0.82rem;
+  color: #555;
+  font-style: italic;
 }
 
 .status-text {
@@ -420,5 +494,27 @@ button {
 
 .status-text--error {
   color: #e05c5c;
+}
+
+/* Wide screens: two-column layout */
+@media (min-width: 900px) {
+  .content-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .preview-column {
+    flex: 1;
+  }
+
+  .controls-panel {
+    width: 268px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
 }
 </style>
