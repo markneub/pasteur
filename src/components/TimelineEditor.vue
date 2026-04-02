@@ -577,8 +577,22 @@ function onPointerMove(e) {
     return
   }
 
-  // Hover — update cursor based on proximity to trim handles
-  canvasCursor.value = isNearTrimHandle(x) ? 'col-resize' : 'crosshair'
+  // Hover — update cursor: trim handles > draggable cues > default
+  if (isNearTrimHandle(x)) {
+    canvasCursor.value = 'col-resize'
+    return
+  }
+
+  // Check proximity to draggable cue lines (index > 0)
+  for (let i = 1; i < props.presetTimeline.length; i++) {
+    const cueX = timeToX(props.presetTimeline[i].startTime)
+    if (Math.abs(x - cueX) <= CUE_HIT_PX) {
+      canvasCursor.value = 'ew-resize'
+      return
+    }
+  }
+
+  canvasCursor.value = 'crosshair'
 }
 
 function onPointerUp() {
