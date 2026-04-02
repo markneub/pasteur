@@ -63,11 +63,15 @@ const {
   startRenderLoop,
   stopRenderLoop,
   getAnalyserNode,
+  launchSongTitleAnim,
   dispose,
 } = useButterchurn()
 
-// Expose analyser access to parent for the export pipeline
-defineExpose({ getAnalyserNode })
+// Expose analyser access and title anim to parent
+defineExpose({
+  getAnalyserNode,
+  launchTitleAnim: launchSongTitleAnim,
+})
 
 onMounted(() => {
   if (!props.audioContext || !canvasEl.value) return

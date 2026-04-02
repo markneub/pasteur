@@ -127,6 +127,30 @@
 
           <Separator />
 
+          <!-- Title text -->
+          <div class="title-text-section">
+            <label class="title-text-checkbox-row">
+              <input
+                v-model="showTitle"
+                type="checkbox"
+                class="accent-primary"
+                :disabled="isExporting"
+              >
+              <span class="title-text-label">Show title at start</span>
+            </label>
+            <input
+              v-if="showTitle"
+              v-model="titleText"
+              type="text"
+              placeholder="Title text…"
+              class="title-text-input"
+              :disabled="isExporting"
+              aria-label="Title text shown at start of visualization"
+            >
+          </div>
+
+          <Separator />
+
           <ExportControls
             v-model="exportSettings"
             :disabled="isExporting"
@@ -215,6 +239,10 @@ watch(clipStart, (newStart) => {
 
 // --- Waveform peaks ---
 const { peaks, computePeaks } = useWaveform()
+
+// --- Title text ---
+const showTitle = ref(true)
+const titleText = ref('')
 
 // --- Export settings ---
 const exportSettings = ref({
@@ -313,6 +341,8 @@ watch([canExportMp4, canExportWebM], () => {
 
 async function onFileSelected(file) {
   audioFile.value = file
+  // Default title to filename without extension
+  titleText.value = file.name.replace(/\.[^.]+$/, '')
   await loadFile(file)
   play()
 }
@@ -340,6 +370,10 @@ function clearFile() {
 // Play with clip loop bounds so audio loops between the trim handles
 function onTimelinePlay() {
   const offset = Math.max(playheadTime.value, clipStart.value)
+  // Show title anim when starting from the beginning of the clip
+  if (showTitle.value && titleText.value && offset <= clipStart.value + 0.1) {
+    visualizerPreviewRef.value?.launchTitleAnim(titleText.value)
+  }
   play(offset, clipStart.value, effectiveClipEnd.value)
 }
 
@@ -366,6 +400,8 @@ async function onExport() {
     exportSettings: exportSettings.value,
     clipStart: clipStart.value,
     clipEnd: effectiveClipEnd.value,
+    titleText: titleText.value,
+    showTitle: showTitle.value,
   })
   // After export finishes (success, error, or cancel): park playhead at clip start
   playheadTime.value = clipStart.value
@@ -498,6 +534,46 @@ body {
   font-size: 0.82rem;
   color: #555;
   font-style: italic;
+}
+
+.title-text-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title-text-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #ccc;
+}
+
+.title-text-label {
+  font-size: 0.82rem;
+  color: #ccc;
+}
+
+.title-text-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 5px;
+  color: #e0e0e0;
+  font-size: 0.82rem;
+  font-family: inherit;
+  padding: 5px 10px;
+}
+
+.title-text-input:focus {
+  outline: none;
+  border-color: #7c6af7;
+}
+
+.title-text-input:disabled {
+  opacity: 0.4;
 }
 
 .status-text {

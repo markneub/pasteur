@@ -52,8 +52,10 @@ export function useExporter() {
    * @param {{width: number, height: number, fps: number, format: 'mp4'|'webm'}} params.exportSettings
    * @param {number} [params.clipStart=0] Start of the clip region in seconds
    * @param {number|null} [params.clipEnd=null] End of the clip region (null = full duration)
+   * @param {string} [params.titleText=''] Title text to display at the start via butterchurn
+   * @param {boolean} [params.showTitle=false] Whether to show the title text
    */
-  async function startExport({ audioBuffer, audioContext, presetTimeline, exportSettings, clipStart = 0, clipEnd = null }) {
+  async function startExport({ audioBuffer, audioContext, presetTimeline, exportSettings, clipStart = 0, clipEnd = null, titleText = '', showTitle = false }) {
     if (isExporting.value) return
 
     cancelled = false
@@ -188,6 +190,11 @@ export function useExporter() {
         .map((cue) => ({ ...cue, startFrame: Math.round(cue.startTime * fps) - frameOffset }))
         .filter((cue) => cue.startFrame >= 0 && cue.startFrame < totalFrames)
         .sort((a, b) => a.startFrame - b.startFrame)
+
+      // Fire title animation at frame 0 if requested
+      if (showTitle && titleText) {
+        visualizer.launchSongTitleAnim(titleText)
+      }
 
       // ── Non-realtime render loop ─────────────────────────────────────────
       for (let i = 0; i < totalFrames && !cancelled; i++) {

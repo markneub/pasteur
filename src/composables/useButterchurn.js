@@ -89,6 +89,10 @@ export function useButterchurn() {
     return visualizer.value?.audio?.analyser ?? null
   }
 
+  function launchSongTitleAnim(text) {
+    visualizer.value?.launchSongTitleAnim(text)
+  }
+
   function dispose() {
     stopRenderLoop()
     if (visualizer.value) {
@@ -114,6 +118,7 @@ export function useButterchurn() {
     startRenderLoop,
     stopRenderLoop,
     getAnalyserNode,
+    launchSongTitleAnim,
     dispose,
   }
 }
