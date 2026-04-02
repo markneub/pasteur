@@ -18,6 +18,15 @@
       Please use a recent version of Chrome or Edge.
     </div>
 
+    <!-- Hidden file input for the Change button (always in DOM) -->
+    <input
+      ref="changeFileInputEl"
+      type="file"
+      accept="audio/mpeg,audio/wav,audio/x-wav,audio/flac,audio/x-flac,audio/aac,audio/ogg,audio/mp4,audio/x-m4a"
+      style="display:none"
+      @change="onChangeFileInput"
+    >
+
     <main class="app-main">
       <div class="content-layout">
         <!-- Left column: preview + timeline -->
@@ -103,7 +112,7 @@
               size="sm"
               :disabled="isExporting"
               aria-label="Change audio file"
-              @click="clearFile"
+              @click="changeFileInputEl?.click()"
             >
               Change
             </Button>
@@ -161,6 +170,7 @@ import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets
 
 const audioFile = ref(null)
 const visualizerPreviewRef = ref(null)
+const changeFileInputEl = ref(null)
 
 // --- Preset timeline ---
 const presetTimeline = ref([createPresetCue(DEFAULT_PRESET_NAME, 0, 0)])
@@ -303,6 +313,14 @@ async function onFileSelected(file) {
   audioFile.value = file
   await loadFile(file)
   play()
+}
+
+async function onChangeFileInput(e) {
+  const file = e.target.files?.[0]
+  e.target.value = '' // reset so the same file can be re-selected
+  if (!file) return
+  clearFile()
+  await onFileSelected(file)
 }
 
 function clearFile() {
