@@ -19,6 +19,7 @@ export function useButterchurn() {
 
   let animFrameId = null
   let canvasEl = null
+  let targetFps = 60  // 0 = unlimited
 
   function init(canvas, audioContext, { width, height } = {}) {
     if (!isSupported) return
@@ -65,12 +66,21 @@ export function useButterchurn() {
   function startRenderLoop() {
     if (!visualizer.value) return
     stopRenderLoop()
+    let lastRenderMs = 0
 
-    function loop() {
-      visualizer.value?.render()
+    function loop(timestamp) {
+      const minInterval = targetFps > 0 ? 1000 / targetFps : 0
+      if (timestamp - lastRenderMs >= minInterval) {
+        lastRenderMs = timestamp
+        visualizer.value?.render()
+      }
       animFrameId = requestAnimationFrame(loop)
     }
     animFrameId = requestAnimationFrame(loop)
+  }
+
+  function setTargetFps(fps) {
+    targetFps = fps > 0 ? fps : 60
   }
 
   function stopRenderLoop() {
@@ -117,6 +127,7 @@ export function useButterchurn() {
     setSize,
     startRenderLoop,
     stopRenderLoop,
+    setTargetFps,
     getAnalyserNode,
     launchSongTitleAnim,
     dispose,

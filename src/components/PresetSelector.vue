@@ -10,10 +10,10 @@
       <div
         ref="comboboxEl"
         class="relative flex-1 min-w-0"
-        @focusout="onFocusOut"
       >
         <!-- Trigger button -->
         <button
+          ref="triggerButtonEl"
           type="button"
           class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           :aria-expanded="isOpen"
@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { Shuffle } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -130,6 +130,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const comboboxEl = ref(null)
+const triggerButtonEl = ref(null)
 const searchInputEl = ref(null)
 const listEl = ref(null)
 const isOpen = ref(false)
@@ -177,14 +178,18 @@ function selectHighlighted() {
 function selectPreset(name) {
   emit('update:modelValue', name)
   close()
+  // Return focus to trigger so Radix's focus-trap doesn't consume the next outside click
+  nextTick(() => triggerButtonEl.value?.focus())
 }
 
-function onFocusOut(e) {
-  // Close if focus moved outside this component
-  if (!comboboxEl.value?.contains(e.relatedTarget)) {
+function onDocumentMouseDown(e) {
+  if (isOpen.value && !comboboxEl.value?.contains(e.target)) {
     close()
   }
 }
+
+onMounted(() => document.addEventListener('mousedown', onDocumentMouseDown, true))
+onUnmounted(() => document.removeEventListener('mousedown', onDocumentMouseDown, true))
 
 function pickRandom() {
   const current = props.modelValue

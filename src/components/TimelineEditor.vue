@@ -20,11 +20,11 @@
       </button>
 
       <span
-        ref="timeDisplayEl"
+        ref="clipDisplayEl"
         class="time-display"
       />
       <span
-        ref="clipDisplayEl"
+        ref="timeDisplayEl"
         class="clip-display"
       />
 
@@ -92,7 +92,6 @@
             <PopoverContent
               side="top"
               :side-offset="12"
-              @pointerdown.stop
             >
               <div class="cue-pop-header">
                 <span
@@ -210,6 +209,7 @@ const openCueIndex = ref(null)
 let cueClickedIndex = null
 let cueClickedX = 0
 let currentPointerX = 0
+let cueOpenAtPointerDown = null  // openCueIndex value captured at pointerdown time
 
 // Displayed playhead time — plain variable, updated in draw() and written to DOM directly
 // (NOT a Vue ref — keeping it reactive would re-render the component 60×/sec and reset
@@ -298,12 +298,13 @@ function draw() {
 
   // Update display time from live clock or stopped position
   displayTime = props.isPlaying ? props.getCurrentTime() : props.playheadTime
-  if (timeDisplayEl.value) {
-    timeDisplayEl.value.textContent = `${formatTime(displayTime)} / ${formatTime(props.duration)}`
-  }
   if (clipDisplayEl.value) {
-    const cd = props.clipEnd - props.clipStart
-    clipDisplayEl.value.textContent = `Clip: ${formatTime(props.clipStart)} – ${formatTime(props.clipEnd)} (${formatTime(cd)})`
+    const clipPos = Math.max(0, displayTime - props.clipStart)
+    const clipDur = props.clipEnd - props.clipStart
+    clipDisplayEl.value.textContent = `Clip: ${formatTime(clipPos)} / ${formatTime(clipDur)}`
+  }
+  if (timeDisplayEl.value) {
+    timeDisplayEl.value.textContent = `Original: ${formatTime(displayTime)} / ${formatTime(props.duration)}`
   }
 
   ctx.clearRect(0, 0, W, TOTAL_H)
@@ -482,6 +483,8 @@ function isNearTrimHandle(x) {
 
 function onPointerDown(e) {
   if (!canvasEl.value) return
+  // Capture open state before Radix's DismissableLayer fires @update:open(false) on pointerdown
+  cueOpenAtPointerDown = openCueIndex.value
   const x = getOffsetX(e)
   const y = getOffsetY(e)
   const leftX  = timeToX(props.clipStart)
@@ -617,13 +620,16 @@ function onPointerMove(e) {
 }
 
 function onPointerUp() {
-  // Detect click (small movement) on a cue marker → toggle popover
+  // Detect click (small movement) on a cue marker → toggle popover.
+  // Use cueOpenAtPointerDown (not current openCueIndex) because Radix's
+  // DismissableLayer may have already set openCueIndex to null on pointerdown.
   if (cueClickedIndex !== null) {
     if (Math.abs(currentPointerX - cueClickedX) < 4) {
-      openCueIndex.value = openCueIndex.value === cueClickedIndex ? null : cueClickedIndex
+      openCueIndex.value = cueOpenAtPointerDown === cueClickedIndex ? null : cueClickedIndex
     }
     cueClickedIndex = null
   }
+  cueOpenAtPointerDown = null
 
   isDraggingLeft  = false
   isDraggingRight = false

@@ -79,8 +79,9 @@ const formatLabel = computed(() =>
   props.exportSettings.format === 'webm' ? 'WebM' : 'MP4'
 )
 
-// Fixed encoding bitrates used by useExporter (not scaled by resolution)
-const VIDEO_BITRATE = 8_000_000  // 8 Mbps
+// Effective bitrate used for size estimation. The encoder is configured at
+// 8 Mbps but butterchurn content compresses well; empirically ~2 Mbps actual.
+const VIDEO_BITRATE = 2_000_000  // ~2 Mbps effective
 const AUDIO_BITRATE = 192_000    // 192 kbps
 
 const estimatedSizeMb = computed(() => {

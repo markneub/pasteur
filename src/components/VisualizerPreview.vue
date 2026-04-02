@@ -47,6 +47,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  exportWidth: {
+    type: Number,
+    default: 1920,
+  },
+  exportHeight: {
+    type: Number,
+    default: 1080,
+  },
+  fps: {
+    type: Number,
+    default: 60,
+  },
 })
 
 const containerEl = ref(null)
@@ -60,6 +72,7 @@ const {
   disconnectAudio,
   loadPreset,
   setSize,
+  setTargetFps,
   startRenderLoop,
   stopRenderLoop,
   getAnalyserNode,
@@ -104,6 +117,15 @@ watch(() => props.isPlaying, (playing) => {
   }
 })
 
+watch(() => props.fps, (fps) => {
+  setTargetFps(fps)
+}, { immediate: true })
+
+// Re-size canvas when export dimensions change
+watch([() => props.exportWidth, () => props.exportHeight], () => {
+  if (lastContainerW > 0 && lastContainerH > 0) applyCanvasSize(lastContainerW, lastContainerH)
+})
+
 function setupVisualizer() {
   // Init with a default size — the ResizeObserver fires immediately after
   // observeResize() and calls setSize() with the true container dimensions.
@@ -115,6 +137,26 @@ function setupVisualizer() {
 }
 
 let resizeObserver = null
+let lastContainerW = 0
+let lastContainerH = 0
+
+function applyCanvasSize(containerW, containerH) {
+  const r = props.exportWidth / props.exportHeight
+  let cw, ch
+  if (containerW / containerH > r) {
+    ch = containerH
+    cw = containerH * r
+  } else {
+    cw = containerW
+    ch = containerW / r
+  }
+  cw = Math.round(cw)
+  ch = Math.round(ch)
+  canvasEl.value.style.width = cw + 'px'
+  canvasEl.value.style.height = ch + 'px'
+  setSize(cw, ch)
+}
+
 function observeResize() {
   resizeObserver?.disconnect()
   resizeObserver = new ResizeObserver((entries) => {
@@ -122,7 +164,9 @@ function observeResize() {
     if (!entry) return
     const { width, height } = entry.contentRect
     if (width > 0 && height > 0) {
-      setSize(Math.round(width), Math.round(height))
+      lastContainerW = width
+      lastContainerH = height
+      applyCanvasSize(width, height)
     }
   })
   resizeObserver.observe(containerEl.value)
@@ -134,16 +178,17 @@ function observeResize() {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #111;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .visualizer-preview__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  display: block;
+  flex-shrink: 0;
 }
 
 .visualizer-preview__overlay {

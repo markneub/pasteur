@@ -54,6 +54,9 @@
                 :preset="activePreset"
                 :transition-duration="activeTransitionDuration"
                 :is-playing="isPlaying"
+                :export-width="exportSettings.width"
+                :export-height="exportSettings.height"
+                :fps="exportSettings.fps"
               />
               <div
                 v-else-if="isLoading"

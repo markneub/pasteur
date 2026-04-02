@@ -18,11 +18,13 @@
         >
         <Select
           :model-value="activeSizePreset"
-          :disabled="sizeMode !== 'preset'"
           @update:model-value="onSizePresetChange"
           @open-change="(open) => { if (open) sizeMode = 'preset' }"
         >
-          <SelectTrigger class="h-8 flex-1 text-sm">
+          <SelectTrigger
+            class="h-8 flex-1 text-sm"
+            @click="sizeMode = 'preset'"
+          >
             <SelectValue placeholder="Select size…" />
           </SelectTrigger>
           <SelectContent>
@@ -49,26 +51,24 @@
         >
         <div class="flex items-center gap-2">
           <input
-            class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
+            class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             type="number"
             min="1"
             max="7680"
             placeholder="Width"
             aria-label="Custom width in pixels"
-            :disabled="sizeMode !== 'custom'"
             :value="customWidth"
             @focus="sizeMode = 'custom'"
             @change="onCustomWidth"
           >
           <span class="text-sm text-muted-foreground">×</span>
           <input
-            class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
+            class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             type="number"
             min="1"
             max="4320"
             placeholder="Height"
             aria-label="Custom height in pixels"
-            :disabled="sizeMode !== 'custom'"
             :value="customHeight"
             @focus="sizeMode = 'custom'"
             @change="onCustomHeight"
