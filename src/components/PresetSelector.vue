@@ -9,7 +9,7 @@
       <!-- Combobox trigger + dropdown -->
       <div
         ref="comboboxEl"
-        class="relative flex-1"
+        class="relative flex-1 min-w-0"
         @focusout="onFocusOut"
       >
         <!-- Trigger button -->
@@ -38,10 +38,11 @@
           </svg>
         </button>
 
-        <!-- Dropdown panel -->
+        <!-- Dropdown panel: min-width matches trigger, can grow wider for long names -->
         <div
           v-if="isOpen"
-          class="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md"
+          class="absolute z-50 mt-1 min-w-full rounded-md border border-border bg-popover shadow-md"
+          style="width: max-content; max-width: min(400px, 90vw)"
         >
           <!-- Search input -->
           <div class="p-2 border-b border-border">
@@ -80,7 +81,7 @@
               role="option"
               :aria-selected="name === modelValue"
               :data-index="i"
-              class="flex w-full items-center px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+              class="flex w-full items-center px-3 py-1.5 text-sm whitespace-nowrap hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
               :class="{ 'bg-accent/40': name === modelValue }"
               @click="selectPreset(name)"
             >
