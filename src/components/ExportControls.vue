@@ -16,25 +16,25 @@
           class="accent-primary"
           @change="sizeMode = 'preset'"
         >
-        <ToggleGroup
-          type="single"
-          class="flex-wrap justify-start gap-1.5"
+        <Select
           :model-value="activeSizePreset"
           :disabled="sizeMode !== 'preset'"
           @update:model-value="onSizePresetChange"
+          @open-change="(open) => { if (open) sizeMode = 'preset' }"
         >
-          <ToggleGroupItem
-            v-for="preset in SIZE_PRESETS"
-            :key="preset.label"
-            :value="preset.label"
-            variant="outline"
-            size="sm"
-            :aria-label="`${preset.label} (${preset.width}×${preset.height})`"
-            @click="sizeMode = 'preset'"
-          >
-            {{ preset.label }}
-          </ToggleGroupItem>
-        </ToggleGroup>
+          <SelectTrigger class="h-8 flex-1 text-sm">
+            <SelectValue placeholder="Select size…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="preset in SIZE_PRESETS"
+              :key="preset.label"
+              :value="preset.label"
+            >
+              {{ preset.label }} ({{ preset.width }}×{{ preset.height }})
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </label>
 
       <!-- Radio: custom -->
@@ -91,23 +91,23 @@
       <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
         Frame rate
       </Label>
-      <ToggleGroup
-        type="single"
-        class="flex-wrap justify-start gap-1.5"
+      <Select
         :model-value="String(modelValue.fps)"
         @update:model-value="onFpsChange"
       >
-        <ToggleGroupItem
-          v-for="fps in FPS_OPTIONS"
-          :key="fps"
-          :value="String(fps)"
-          variant="outline"
-          size="sm"
-          :aria-label="`${fps} frames per second`"
-        >
-          {{ fps }}
-        </ToggleGroupItem>
-      </ToggleGroup>
+        <SelectTrigger class="h-8 text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            v-for="fps in FPS_OPTIONS"
+            :key="fps"
+            :value="String(fps)"
+          >
+            {{ fps }} fps
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
 
     <!-- Format -->
@@ -142,6 +142,13 @@
 import { ref, computed, watch } from 'vue'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select'
 
 const SIZE_PRESETS = [
   { label: '4K',        width: 3840, height: 2160 },
@@ -175,7 +182,6 @@ const formatSupport = computed(() => ({
 
 const emit = defineEmits(['update:modelValue'])
 
-// Determine initial mode based on whether current dimensions match a preset
 function matchesPreset(w, h) {
   return SIZE_PRESETS.find(p => p.width === w && p.height === h) ?? null
 }
@@ -184,7 +190,6 @@ const sizeMode = ref(matchesPreset(props.modelValue.width, props.modelValue.heig
 const customWidth = ref(props.modelValue.width)
 const customHeight = ref(props.modelValue.height)
 
-// Keep custom inputs in sync when parent changes modelValue externally
 watch(() => props.modelValue, (val) => {
   const preset = matchesPreset(val.width, val.height)
   if (preset) {
