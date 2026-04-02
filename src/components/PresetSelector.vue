@@ -51,7 +51,7 @@
               v-model="searchQuery"
               type="text"
               placeholder="Search presets…"
-              class="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               aria-label="Filter presets"
               @keydown.escape="close"
               @keydown.down.prevent="focusList"
@@ -81,7 +81,7 @@
               role="option"
               :aria-selected="name === modelValue"
               :data-index="i"
-              class="flex w-full items-center px-3 py-1.5 text-sm whitespace-nowrap hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+              class="flex w-full items-center px-3 py-1 text-xs whitespace-nowrap hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
               :class="{ 'bg-accent/40': name === modelValue }"
               @click="selectPreset(name)"
             >
