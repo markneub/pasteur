@@ -244,6 +244,19 @@ const { peaks, computePeaks } = useWaveform()
 const showTitle = ref(true)
 const titleText = ref('')
 
+// When the title text changes, debounce then seek to clipStart and replay
+let titleReplayTimer = null
+watch(titleText, () => {
+  if (!audioBuffer.value) return
+  clearTimeout(titleReplayTimer)
+  titleReplayTimer = setTimeout(() => {
+    stop()
+    playheadTime.value = clipStart.value
+    play(clipStart.value, clipStart.value, effectiveClipEnd.value)
+    maybeLaunchTitle()
+  }, 600)
+})
+
 // --- Export settings ---
 const exportSettings = ref({
   width: 1920,
