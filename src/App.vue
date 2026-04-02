@@ -286,12 +286,14 @@ const {
 // During playback: rAF loop polls getCurrentTime() to track active cue
 watch(isPlaying, (playing) => {
   if (playing) {
-    let prevTime = getCurrentTime()
+    let prevTime = null
     function tick() {
       const t = getCurrentTime()
       liveActiveCueIndex.value = getActiveCueIndexAtTime(t)
-      // Detect loop: time jumped backward (audio looped back to clipStart)
-      if (t < prevTime - 0.5) maybeLaunchTitle()
+      // Detect loop: time jumped backward (audio looped back to clipStart).
+      // Skip the first tick (prevTime = null) to avoid false-triggering on
+      // seek-and-resume, where prevTime would be stale from the previous position.
+      if (prevTime !== null && t < prevTime - 0.5) maybeLaunchTitle()
       prevTime = t
       playbackRafId = requestAnimationFrame(tick)
     }
@@ -413,7 +415,6 @@ async function onTimelineSeek(seconds) {
   playheadTime.value = seconds
   if (wasPlaying) {
     await play(seconds, clipStart.value, effectiveClipEnd.value)
-    if (seconds <= clipStart.value + 0.1) maybeLaunchTitle()
   }
 }
 
