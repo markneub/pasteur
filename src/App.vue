@@ -403,7 +403,10 @@ async function onTimelineSeek(seconds) {
   const wasPlaying = isPlaying.value
   stop()
   playheadTime.value = seconds
-  if (wasPlaying) await play(seconds, clipStart.value, effectiveClipEnd.value)
+  if (wasPlaying) {
+    await play(seconds, clipStart.value, effectiveClipEnd.value)
+    if (seconds <= clipStart.value + 0.1) maybeLaunchTitle()
+  }
 }
 
 
