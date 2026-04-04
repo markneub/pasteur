@@ -1,8 +1,12 @@
 <template>
   <div id="app">
     <header class="app-header">
-      <h1 class="app-title">pasteur</h1>
-      <p class="app-subtitle">milkdrop visualization exporter</p>
+      <h1 class="app-title">
+        pasteur
+      </h1>
+      <p class="app-subtitle">
+        milkdrop visualization exporter
+      </p>
     </header>
 
     <div
@@ -42,7 +46,10 @@
               @dragleave="onPreviewDragLeave"
               @drop.prevent="onPreviewDrop"
             >
-              <div v-if="isDraggingOverPreview" class="visualizer-area__drop-overlay">
+              <div
+                v-if="isDraggingOverPreview"
+                class="visualizer-area__drop-overlay"
+              >
                 Drop to change track
               </div>
               <!-- During export: show the currently rendered export frame -->
@@ -183,6 +190,27 @@
         </aside>
       </div>
     </main>
+
+    <footer class="app-footer">
+      <p>
+        pasteur.cc by <a
+          href="https://www.neuinteractive.com/"
+          target="_blank"
+          rel="noopener"
+        ><img
+          src="/ni.png"
+          alt="NI"
+          class="footer-logo"
+        ></a>.
+        credit to jberg for <a
+          href="https://github.com/jberg/butterchurn"
+          target="_blank"
+          rel="noopener"
+        >butterchurn</a>,
+        Ryan Geiss for Milkdrop, and all of the preset authors.
+        exports powered by WebCodecs.
+      </p>
+    </footer>
   </div>
 </template>
 
@@ -664,6 +692,32 @@ body {
 
 .status-text--error {
   color: #e05c5c;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 24px 32px;
+  font-size: 0.75rem;
+  color: #444;
+  line-height: 1.6;
+}
+
+.app-footer a {
+  color: #555;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-footer a:hover {
+  color: #888;
+}
+
+.footer-logo {
+  height: 1.1em;
+  width: auto;
+  vertical-align: middle;
+  display: inline-block;
+  filter: grayscale(100%) opacity(60%);
 }
 
 /* Wide screens: two-column layout */
