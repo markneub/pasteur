@@ -3,7 +3,7 @@
     <!-- Control bar -->
     <div class="timeline-controls">
       <button
-        class="ctrl-btn"
+        class="ctrl-btn ctrl-btn--fixed"
         aria-label="Restart from clip start"
         @click="emit('seek', props.clipStart); emit('play')"
       >
@@ -11,7 +11,7 @@
       </button>
       <button
         v-if="!isPlaying"
-        class="ctrl-btn"
+        class="ctrl-btn ctrl-btn--fixed"
         aria-label="Play audio"
         @click="emit('play')"
       >
@@ -19,7 +19,7 @@
       </button>
       <button
         v-else
-        class="ctrl-btn"
+        class="ctrl-btn ctrl-btn--fixed"
         aria-label="Pause audio"
         @click="emit('pause')"
       >
@@ -773,6 +773,13 @@ onUnmounted(() => {
 .ctrl-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.ctrl-btn--fixed {
+  width: 2.25rem;
+  text-align: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .ctrl-btn--sm {
