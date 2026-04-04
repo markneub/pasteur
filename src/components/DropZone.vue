@@ -234,4 +234,22 @@ async function loadSample() {
   color: #e05c5c;
   margin-top: 4px;
 }
+
+@media (max-width: 480px) {
+  .drop-zone__content {
+    gap: 4px;
+  }
+
+  .drop-zone__icon {
+    margin-bottom: 2px;
+  }
+
+  .drop-zone__actions {
+    margin-top: 2px;
+  }
+
+  .drop-zone__hint {
+    margin-top: 6px;
+  }
+}
 </style>
