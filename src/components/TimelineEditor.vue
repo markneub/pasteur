@@ -97,7 +97,7 @@
               :style="{ left: cueXPercent(cue) + '%' }"
             />
             <PopoverContent
-              side="top"
+              side="bottom"
               :side-offset="12"
             >
               <div class="cue-pop-header">
