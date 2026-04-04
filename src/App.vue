@@ -162,6 +162,61 @@
               :disabled="isExporting"
               aria-label="Title text shown at start of visualization"
             >
+            <template v-if="showTitle">
+              <div class="title-text-options-row">
+                <label class="title-text-option-label">Duration</label>
+                <input
+                  v-model.number="titleDuration"
+                  type="number"
+                  min="0.1"
+                  max="30"
+                  step="0.1"
+                  class="title-text-input title-text-input--short"
+                  :disabled="isExporting"
+                  aria-label="Title display duration in seconds"
+                >
+                <span class="title-text-unit">s</span>
+              </div>
+              <div class="title-text-options-row">
+                <label class="title-text-option-label">Font</label>
+                <select
+                  v-if="localFontFamilies.length > 0"
+                  v-model="titleFontFamily"
+                  class="title-text-input"
+                  :disabled="isExporting"
+                  aria-label="Title font family"
+                >
+                  <option
+                    v-for="family in fontSelectOptions"
+                    :key="family"
+                    :value="family"
+                  >{{ family }}</option>
+                </select>
+                <input
+                  v-else
+                  v-model="titleFontFamily"
+                  type="text"
+                  placeholder="Times New Roman"
+                  class="title-text-input"
+                  :disabled="isExporting"
+                  aria-label="Title font family"
+                >
+              </div>
+              <div class="title-text-options-row">
+                <label class="title-text-option-label">Style</label>
+                <select
+                  v-model="titleFontStyle"
+                  class="title-text-input"
+                  :disabled="isExporting"
+                  aria-label="Title font style"
+                >
+                  <option value="italic">Italic</option>
+                  <option value="normal">Normal</option>
+                  <option value="bold">Bold</option>
+                  <option value="bold italic">Bold Italic</option>
+                </select>
+              </div>
+            </template>
           </div>
 
           <Separator />
@@ -279,10 +334,37 @@ const { peaks, computePeaks } = useWaveform()
 // --- Title text ---
 const showTitle = ref(true)
 const titleText = ref('')
+const titleDuration = ref(2.5)
+const titleFontFamily = ref('Times New Roman')
+const titleFontStyle = ref('italic')
+const localFontFamilies = ref([])
 
-// When the title text changes, debounce then seek to clipStart and replay
+async function loadLocalFonts() {
+  if (localFontFamilies.value.length > 0) return
+  if (!('queryLocalFonts' in window)) return
+  try {
+    const fonts = await window.queryLocalFonts()
+    const families = [...new Set(fonts.map((f) => f.family))].sort()
+    localFontFamilies.value = families
+  } catch {
+    // permission denied or API unavailable — falls back to text input
+  }
+}
+
+// Computed list that always includes the current value even if not in system fonts
+const fontSelectOptions = computed(() => {
+  const families = localFontFamilies.value
+  if (!families.includes(titleFontFamily.value)) {
+    return [titleFontFamily.value, ...families]
+  }
+  return families
+})
+
+watch(showTitle, (val) => { if (val) loadLocalFonts() }, { immediate: true })
+
+// When title settings change, debounce then seek to clipStart and replay
 let titleReplayTimer = null
-watch(titleText, () => {
+watch([titleText, titleDuration, titleFontFamily, titleFontStyle], () => {
   if (!audioBuffer.value) return
   clearTimeout(titleReplayTimer)
   titleReplayTimer = setTimeout(() => {
@@ -401,7 +483,11 @@ watch([canExportMp4, canExportWebM], () => {
 async function maybeLaunchTitle() {
   if (!showTitle.value || !titleText.value) return
   await nextTick()
-  visualizerPreviewRef.value?.launchTitleAnim(titleText.value)
+  visualizerPreviewRef.value?.launchTitleAnim(titleText.value, {
+    duration: titleDuration.value,
+    fontFamily: titleFontFamily.value,
+    fontStyle: titleFontStyle.value,
+  })
 }
 
 async function onFileSelected(file) {
@@ -486,6 +572,11 @@ async function onExport() {
     clipEnd: effectiveClipEnd.value,
     titleText: titleText.value,
     showTitle: showTitle.value,
+    titleOptions: {
+      duration: titleDuration.value,
+      fontFamily: titleFontFamily.value,
+      fontStyle: titleFontStyle.value,
+    },
   })
   // After export finishes (success, error, or cancel): park playhead at clip start
   playheadTime.value = clipStart.value
@@ -680,6 +771,28 @@ body {
 
 .title-text-input:disabled {
   opacity: 0.4;
+}
+
+.title-text-options-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-text-option-label {
+  font-size: 0.875rem;
+  color: #888;
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.title-text-input--short {
+  width: 72px;
+}
+
+.title-text-unit {
+  font-size: 0.875rem;
+  color: #666;
 }
 
 .status-text {

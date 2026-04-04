@@ -99,8 +99,8 @@ export function useButterchurn() {
     return visualizer.value?.audio?.analyser ?? null
   }
 
-  function launchSongTitleAnim(text) {
-    visualizer.value?.launchSongTitleAnim(text)
+  function launchSongTitleAnim(text, options) {
+    visualizer.value?.launchSongTitleAnim(text, options)
   }
 
   function dispose() {

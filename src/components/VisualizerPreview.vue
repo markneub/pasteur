@@ -83,7 +83,7 @@ const {
 // Expose analyser access and title anim to parent
 defineExpose({
   getAnalyserNode,
-  launchTitleAnim: launchSongTitleAnim,
+  launchTitleAnim: (text, options) => launchSongTitleAnim(text, options),
 })
 
 onMounted(() => {

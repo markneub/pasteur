@@ -1,0 +1,48 @@
+diff --git a/node_modules/butterchurn/lib/butterchurn.js b/node_modules/butterchurn/lib/butterchurn.js
+index f0b4bb1..bee902a 100644
+--- a/node_modules/butterchurn/lib/butterchurn.js
++++ b/node_modules/butterchurn/lib/butterchurn.js
+@@ -2899,12 +2899,13 @@ function () {
+     }
+   }, {
+     key: "launchSongTitleAnim",
+-    value: function launchSongTitleAnim(text) {
++    value: function launchSongTitleAnim(text, options) {
++      var opts = options || {};
+       this.supertext = {
+         startTime: this.time,
+-        duration: 1.7
++        duration: opts.duration != null ? opts.duration : 1.7
+       };
+-      this.titleText.generateTitleTexture(text);
++      this.titleText.generateTitleTexture(text, opts.fontFamily, opts.fontStyle);
+     }
+   }, {
+     key: "toDataURL",
+@@ -5168,11 +5169,13 @@ function () {
+ 
+   _createClass(TitleText, [{
+     key: "generateTitleTexture",
+-    value: function generateTitleTexture(text) {
++    value: function generateTitleTexture(text, fontFamily, fontStyle) {
+       this.context2D.clearRect(0, 0, this.texsizeX, this.texsizeY);
+       this.fontSize = Math.floor(16 * (this.texsizeX / 256));
+       this.fontSize = Math.max(this.fontSize, 6);
+-      this.context2D.font = "italic ".concat(this.fontSize, "px Times New Roman");
++      var resolvedFamily = fontFamily || "Times New Roman";
++      var resolvedStyle = fontStyle || "italic";
++      this.context2D.font = "".concat(resolvedStyle, " ").concat(this.fontSize, "px ").concat(resolvedFamily);
+       var titleText = text;
+       var textLength = this.context2D.measureText(titleText).width;
+ 
+@@ -6712,8 +6715,8 @@ function () {
+     }
+   }, {
+     key: "launchSongTitleAnim",
+-    value: function launchSongTitleAnim(text) {
+-      this.renderer.launchSongTitleAnim(text);
++    value: function launchSongTitleAnim(text, options) {
++      this.renderer.launchSongTitleAnim(text, options);
+     }
+   }, {
+     key: "toDataURL",

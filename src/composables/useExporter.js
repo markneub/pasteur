@@ -54,8 +54,9 @@ export function useExporter() {
    * @param {number|null} [params.clipEnd=null] End of the clip region (null = full duration)
    * @param {string} [params.titleText=''] Title text to display at the start via butterchurn
    * @param {boolean} [params.showTitle=false] Whether to show the title text
+   * @param {{duration?: number, fontFamily?: string, fontStyle?: string}} [params.titleOptions={}] Title display options
    */
-  async function startExport({ audioBuffer, audioContext, presetTimeline, exportSettings, clipStart = 0, clipEnd = null, titleText = '', showTitle = false }) {
+  async function startExport({ audioBuffer, audioContext, presetTimeline, exportSettings, clipStart = 0, clipEnd = null, titleText = '', showTitle = false, titleOptions = {} }) {
     if (isExporting.value) return
 
     cancelled = false
@@ -193,7 +194,7 @@ export function useExporter() {
 
       // Fire title animation at frame 0 if requested
       if (showTitle && titleText) {
-        visualizer.launchSongTitleAnim(titleText)
+        visualizer.launchSongTitleAnim(titleText, titleOptions)
       }
 
       // ── Non-realtime render loop ─────────────────────────────────────────
