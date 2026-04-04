@@ -96,18 +96,21 @@
         :model-value="modelValue.format"
         @update:model-value="onFormatChange"
       >
-        <ToggleGroupItem
+        <span
           v-for="fmt in FORMAT_OPTIONS"
           :key="fmt.value"
-          :value="fmt.value"
-          variant="outline"
-          size="sm"
-          :disabled="!formatSupport[fmt.value]"
-          :aria-label="formatSupport[fmt.value] ? fmt.label : `${fmt.label} (not supported in this browser)`"
-          :title="formatSupport[fmt.value] ? undefined : `${fmt.label} encoding is not supported in this browser`"
+          :title="!formatSupport[fmt.value] ? `${fmt.label} encoding is not supported in this browser` : undefined"
         >
-          {{ fmt.label }}
-        </ToggleGroupItem>
+          <ToggleGroupItem
+            :value="fmt.value"
+            variant="outline"
+            size="sm"
+            :disabled="!formatSupport[fmt.value]"
+            :aria-label="formatSupport[fmt.value] ? fmt.label : `${fmt.label} (not supported in this browser)`"
+          >
+            {{ fmt.label }}
+          </ToggleGroupItem>
+        </span>
       </ToggleGroup>
     </div>
   </div>
