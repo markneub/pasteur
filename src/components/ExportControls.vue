@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-5">
     <!-- Size -->
     <div class="flex flex-col gap-2">
-      <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+      <Label class="text-[0.7rem] text-muted-foreground font-normal">
         Dimensions
 </Label>
 
@@ -63,7 +63,7 @@
 
     <!-- Frame rate -->
     <div class="flex flex-col gap-2">
-      <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+      <Label class="text-[0.7rem] text-muted-foreground font-normal">
         Frame rate
       </Label>
       <Select
@@ -87,7 +87,7 @@
 
     <!-- Format -->
     <div class="flex flex-col gap-2">
-      <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+      <Label class="text-[0.7rem] text-muted-foreground font-normal">
         Format
       </Label>
       <ToggleGroup

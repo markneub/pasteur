@@ -112,9 +112,6 @@
           class="controls-panel"
           :inert="!audioFile || undefined"
         >
-          <p class="section-heading">
-            Output Settings
-          </p>
           <div
             v-if="audioFile"
             class="file-info"
@@ -134,6 +131,10 @@
               Change
             </Button>
           </div>
+
+          <p class="section-heading">
+            Output Settings
+          </p>
 
           <Separator />
 
@@ -612,10 +613,9 @@ body {
 }
 
 .section-heading {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #555;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #aaa;
 }
 
 .title-text-section {
