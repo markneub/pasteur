@@ -112,6 +112,9 @@
           class="controls-panel"
           :inert="!audioFile || undefined"
         >
+          <p class="section-heading">
+            Output Settings
+          </p>
           <div
             v-if="audioFile"
             class="file-info"
@@ -131,12 +134,6 @@
               Change
             </Button>
           </div>
-          <p
-            v-else
-            class="section-heading"
-          >
-            Output Settings
-          </p>
 
           <Separator />
 
