@@ -194,22 +194,18 @@
 
     <footer class="app-footer">
       <p>
-        pasteur.cc by <a
-          href="https://www.neuinteractive.com/"
-          target="_blank"
-          rel="noopener"
-        ><img
+        pasteur.cc by <img
           src="/ni.png"
           alt="NI"
           class="footer-logo"
-        ></a>.
-        credit to jberg for <a
+        >.
+        Credit to jberg for <a
           href="https://github.com/jberg/butterchurn"
           target="_blank"
           rel="noopener"
         >butterchurn</a>,
-        Ryan Geiss for Milkdrop, and all of the preset authors.
-        exports powered by WebCodecs.
+        Ryan Geiss for Milkdrop, and to all of the preset authors.
+        Exports powered by WebCodecs.
       </p>
     </footer>
   </div>
