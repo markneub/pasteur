@@ -3,8 +3,8 @@
     <!-- Size -->
     <div class="flex flex-col gap-2">
       <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
-        Size
-      </Label>
+        Dimensions
+</Label>
 
       <Select :model-value="selectedOption" @update:model-value="onSizeOptionChange">
         <SelectTrigger class="h-8 text-sm">
