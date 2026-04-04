@@ -180,7 +180,6 @@
               <div class="title-text-options-row">
                 <label class="title-text-option-label">Font</label>
                 <select
-                  v-if="localFontFamilies.length > 0"
                   v-model="titleFontFamily"
                   class="title-text-input"
                   :disabled="isExporting"
@@ -192,15 +191,6 @@
                     :value="family"
                   >{{ family }}</option>
                 </select>
-                <input
-                  v-else
-                  v-model="titleFontFamily"
-                  type="text"
-                  placeholder="Times New Roman"
-                  class="title-text-input"
-                  :disabled="isExporting"
-                  aria-label="Title font family"
-                >
               </div>
               <div class="title-text-options-row">
                 <label class="title-text-option-label">Style</label>
@@ -337,21 +327,25 @@ const titleText = ref('')
 const titleDuration = ref(2.5)
 const titleFontFamily = ref('Times New Roman')
 const titleFontStyle = ref('italic')
-const localFontFamilies = ref([])
+const FALLBACK_FONTS = [
+  'Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Georgia',
+  'Impact', 'Lucida Console', 'Palatino Linotype', 'Tahoma', 'Times New Roman',
+  'Trebuchet MS', 'Verdana',
+]
+const localFontFamilies = ref([...FALLBACK_FONTS])
 
 async function loadLocalFonts() {
-  if (localFontFamilies.value.length > 0) return
   if (!('queryLocalFonts' in window)) return
   try {
     const fonts = await window.queryLocalFonts()
     const families = [...new Set(fonts.map((f) => f.family))].sort()
     localFontFamilies.value = families
   } catch {
-    // permission denied or API unavailable — falls back to text input
+    // permission denied — keep the fallback list
   }
 }
 
-// Computed list that always includes the current value even if not in system fonts
+// Computed list that always includes the current value even if not in the list
 const fontSelectOptions = computed(() => {
   const families = localFontFamilies.value
   if (!families.includes(titleFontFamily.value)) {
