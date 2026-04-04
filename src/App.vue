@@ -408,7 +408,7 @@ watch(isPlaying, (playing) => {
       // Detect loop: time jumped backward (audio looped back to clipStart).
       // Skip the first tick (prevTime = null) to avoid false-triggering on
       // seek-and-resume, where prevTime would be stale from the previous position.
-      if (prevTime !== null && t < prevTime - 0.5) maybeLaunchTitle()
+      if (prevTime !== null && t < prevTime - 0.5 && t <= clipStart.value + 0.5) maybeLaunchTitle()
       prevTime = t
       playbackRafId = requestAnimationFrame(tick)
     }
