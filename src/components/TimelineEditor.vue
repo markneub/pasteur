@@ -7,7 +7,7 @@
         aria-label="Restart from clip start"
         @click="emit('seek', props.clipStart); emit('play')"
       >
-        ↺
+        ↺&#xFE0E;
       </button>
       <button
         v-if="!isPlaying"
@@ -15,7 +15,7 @@
         aria-label="Play audio"
         @click="emit('play')"
       >
-        ▶
+        ▶&#xFE0E;
       </button>
       <button
         v-else
@@ -23,7 +23,7 @@
         aria-label="Pause audio"
         @click="emit('pause')"
       >
-        ⏸
+        ⏸&#xFE0E;
       </button>
 
       <span
@@ -40,7 +40,7 @@
         aria-label="Add cue at current time"
         @click="onAddCue"
       >
-        + Cue
+        Add Preset Cue
       </button>
 
       <div class="zoom-controls">
@@ -133,15 +133,26 @@
                 </div>
               </div>
 
-              <Button
-                v-if="i > 0"
-                variant="destructive"
-                size="sm"
-                class="w-full mt-3"
-                @click="onDeleteCue(i)"
-              >
-                Delete Cue
-              </Button>
+              <div class="flex gap-2 mt-3">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="flex-1"
+                  :disabled="i === 0"
+                  @click="onDeleteCue(i)"
+                >
+                  Delete Cue
+                </Button>
+                <PopoverClose as-child>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    class="flex-1"
+                  >
+                    Save Cue
+                  </Button>
+                </PopoverClose>
+              </div>
             </PopoverContent>
           </Popover>
         </template>
@@ -154,6 +165,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import PresetSelector from './PresetSelector.vue'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
+import { PopoverClose } from 'reka-ui'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { createPresetCue, DEFAULT_PRESET_NAME } from '../utils/presets.js'
