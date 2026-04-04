@@ -41,6 +41,7 @@
             <div
               class="visualizer-area"
               :class="{ 'visualizer-area--drag-over': isDraggingOverPreview }"
+              @click="isPlaying ? stop() : onTimelinePlay()"
               @dragenter.prevent="onPreviewDragEnter"
               @dragover.prevent
               @dragleave="onPreviewDragLeave"
