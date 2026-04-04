@@ -38,7 +38,17 @@
           />
 
           <template v-else>
-            <div class="visualizer-area">
+            <div
+              class="visualizer-area"
+              :class="{ 'visualizer-area--drag-over': isDraggingOverPreview }"
+              @dragenter.prevent="onPreviewDragEnter"
+              @dragover.prevent
+              @dragleave="onPreviewDragLeave"
+              @drop.prevent="onPreviewDrop"
+            >
+              <div v-if="isDraggingOverPreview" class="visualizer-area__drop-overlay">
+                Drop to change track
+              </div>
               <!-- During export: show the currently rendered export frame -->
               <img
                 v-if="isExporting && exportPreviewUrl"
@@ -106,11 +116,11 @@
             v-if="audioFile"
             class="file-info"
           >
-            <span class="file-name">{{ audioFile.name }}</span>
+            <span class="file-name">{{ audioFileName }}</span>
             <span
-              v-if="audioBuffer"
+              v-if="audioDuration"
               class="file-duration"
-            >{{ audioBuffer.duration.toFixed(1) }}s</span>
+            >{{ audioDuration.toFixed(1) }}s</span>
             <Button
               variant="outline"
               size="sm"
@@ -198,8 +208,12 @@ import { useWaveform } from './composables/useWaveform.js'
 import { getPreset, createPresetCue, DEFAULT_PRESET_NAME } from './utils/presets.js'
 
 const audioFile = ref(null)
+const audioFileName = ref('')
+const audioDuration = ref(0)
 const visualizerPreviewRef = ref(null)
 const changeFileInputEl = ref(null)
+const isDraggingOverPreview = ref(false)
+let previewDragCounter = 0
 
 // --- Preset timeline ---
 const presetTimeline = ref([createPresetCue(DEFAULT_PRESET_NAME, 0, 0)])
@@ -311,12 +325,14 @@ watch(playheadTime, (t) => {
 // Compute peaks and reset clip/cue state when a new audio file is loaded
 watch(audioBuffer, (buf) => {
   if (buf) {
+    audioDuration.value = buf.duration
     computePeaks(buf)
     clipStart.value = 0
     clipEnd.value = null
     liveActiveCueIndex.value = 0
     presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME, 0, 0)]
   } else {
+    audioDuration.value = 0
     peaks.value = null
   }
 })
@@ -370,9 +386,18 @@ async function maybeLaunchTitle() {
 }
 
 async function onFileSelected(file) {
+  // Stop playback and reset state — reuse the existing AudioContext
+  if (playbackRafId) { cancelAnimationFrame(playbackRafId); playbackRafId = null }
+  stop()
+  presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME, 0, 0)]
+  clipStart.value = 0
+  clipEnd.value = null
+  liveActiveCueIndex.value = 0
+
   audioFile.value = file
-  // Default title to filename without extension
+  audioFileName.value = file.name
   titleText.value = file.name.replace(/\.[^.]+$/, '')
+
   await loadFile(file)
   play()
   maybeLaunchTitle()
@@ -382,18 +407,25 @@ async function onChangeFileInput(e) {
   const file = e.target.files?.[0]
   e.target.value = '' // reset so the same file can be re-selected
   if (!file) return
-  clearFile()
   await onFileSelected(file)
 }
 
-function clearFile() {
-  if (playbackRafId) { cancelAnimationFrame(playbackRafId); playbackRafId = null }
-  dispose()
-  audioFile.value = null
-  presetTimeline.value = [createPresetCue(DEFAULT_PRESET_NAME, 0, 0)]
-  clipStart.value = 0
-  clipEnd.value = null
-  liveActiveCueIndex.value = 0
+function onPreviewDragEnter() {
+  previewDragCounter++
+  isDraggingOverPreview.value = true
+}
+
+function onPreviewDragLeave() {
+  previewDragCounter--
+  if (previewDragCounter === 0) isDraggingOverPreview.value = false
+}
+
+async function onPreviewDrop(event) {
+  previewDragCounter = 0
+  isDraggingOverPreview.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) return
+  await onFileSelected(file)
 }
 
 // ── Timeline event handlers ────────────────────────────────────────────────
@@ -511,11 +543,30 @@ body {
 }
 
 .visualizer-area {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #000;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.visualizer-area--drag-over {
+  outline: 2px dashed #7c6af7;
+  outline-offset: -2px;
+}
+
+.visualizer-area__drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1rem;
+  pointer-events: none;
 }
 
 .visualizer-placeholder {

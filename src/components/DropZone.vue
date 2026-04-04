@@ -32,14 +32,28 @@
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
-          d="M9 9l3-3m0 0l3 3m-3-3v8M5.25 12H3.75A2.25 2.25 0 001.5 14.25v4.5A2.25 2.25 0 003.75 21h16.5a2.25 2.25 0 002.25-2.25v-4.5A2.25 2.25 0 0020.25 12h-1.5"
+          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
         />
       </svg>
       <p class="drop-zone__label">
-        Drop an audio file here, or <span class="drop-zone__browse">browse</span>
+        Drop an audio file here
       </p>
+      <div class="drop-zone__actions">
+        <button
+          class="drop-zone__btn"
+          @click.stop="openFilePicker"
+        >
+          browse for a file
+        </button>
+        <button
+          class="drop-zone__btn"
+          @click.stop="loadSample"
+        >
+          load a sample track
+        </button>
+      </div>
       <p class="drop-zone__hint">
-        Supports MP3, WAV, FLAC, AAC, OGG, M4A
+        supports MP3, WAV, FLAC, AAC, OGG, M4A
       </p>
       <p
         v-if="errorMessage"
@@ -117,6 +131,14 @@ function isAudioFile(file) {
   // Fallback: check extension only when browser provides no MIME type
   return ACCEPTED_EXTENSIONS.test(file.name)
 }
+
+async function loadSample() {
+  errorMessage.value = ''
+  const response = await fetch('/sample.mp3')
+  const blob = await response.blob()
+  const file = new File([blob], "born in '85.mp3", { type: 'audio/mpeg' })
+  emit('file-selected', file)
+}
 </script>
 
 <style scoped>
@@ -134,7 +156,11 @@ function isAudioFile(file) {
   user-select: none;
 }
 
-.drop-zone:hover,
+.drop-zone:hover {
+  border-color: #555;
+  background: #141414;
+}
+
 .drop-zone--active {
   border-color: #7c6af7;
   background: #15122a;
@@ -173,14 +199,34 @@ function isAudioFile(file) {
   color: #ccc;
 }
 
-.drop-zone__browse {
-  color: #7c6af7;
-  text-decoration: underline;
+.drop-zone__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  pointer-events: all;
+}
+
+.drop-zone__btn {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 999px;
+  padding: 4px 14px;
+  color: #aaa;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  pointer-events: all;
+}
+
+.drop-zone__btn:hover {
+  border-color: #7c6af7;
+  color: #fff;
 }
 
 .drop-zone__hint {
-  font-size: 0.8rem;
-  color: #666;
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 12px;
 }
 
 .drop-zone__error {

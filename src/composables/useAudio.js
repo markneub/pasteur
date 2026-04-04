@@ -64,6 +64,7 @@ export function useAudio() {
   async function loadFile(file) {
     loadError.value = null
     isLoading.value = true
+    audioBuffer.value = null
     stop()
 
     try {
