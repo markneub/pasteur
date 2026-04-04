@@ -99,6 +99,8 @@
             <PopoverContent
               side="bottom"
               :side-offset="12"
+              :collision-padding="12"
+              class="w-[388px] max-w-[calc(100vw-2rem)]"
             >
               <div class="cue-pop-header">
                 <span
@@ -133,11 +135,11 @@
                 </div>
               </div>
 
-              <div class="flex gap-2 mt-3">
+              <div class="flex justify-center gap-2 mt-3">
                 <Button
                   variant="destructive"
                   size="sm"
-                  class="flex-1"
+                  class="max-w-[125px] w-[125px]"
                   :disabled="i === 0"
                   @click="onDeleteCue(i)"
                 >
@@ -147,7 +149,7 @@
                   <Button
                     variant="default"
                     size="sm"
-                    class="flex-1"
+                    class="max-w-[125px] w-[125px]"
                   >
                     Save Cue
                   </Button>

@@ -1,11 +1,46 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <Label
-      class="text-[0.7rem] uppercase tracking-widest text-muted-foreground"
-    >
-      Preset
-    </Label>
-    <div class="flex gap-2">
+    <div class="flex items-center justify-between">
+      <Label
+        class="text-[0.7rem] uppercase tracking-widest text-muted-foreground"
+      >
+        Preset
+      </Label>
+      <!-- Prev / Next / Random buttons -->
+      <div class="flex">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          title="Previous preset"
+          aria-label="Previous preset"
+          class="rounded-r-none border-r-0"
+          @click="pickPrev"
+        >
+          <ChevronUp class="size-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          title="Next preset"
+          aria-label="Next preset"
+          class="rounded-none border-r-0"
+          @click="pickNext"
+        >
+          <ChevronDown class="size-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          title="Random preset"
+          aria-label="Pick random preset"
+          class="rounded-l-none"
+          @click="pickRandom"
+        >
+          <Shuffle class="size-4" />
+        </Button>
+      </div>
+    </div>
+    <div class="flex">
       <!-- Combobox trigger + dropdown -->
       <div
         ref="comboboxEl"
@@ -101,23 +136,13 @@
         </div>
       </div>
 
-      <!-- Random button -->
-      <Button
-        variant="outline"
-        size="icon-sm"
-        title="Random preset"
-        aria-label="Pick random preset"
-        @click="pickRandom"
-      >
-        <Shuffle class="size-4" />
-      </Button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { Shuffle } from 'lucide-vue-next'
+import { Shuffle, ChevronUp, ChevronDown } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { presetNames } from '../utils/presets.js'
@@ -192,6 +217,18 @@ function onDocumentMouseDown(e) {
 
 onMounted(() => document.addEventListener('mousedown', onDocumentMouseDown, true))
 onUnmounted(() => document.removeEventListener('mousedown', onDocumentMouseDown, true))
+
+function pickPrev() {
+  const i = presetNames.indexOf(props.modelValue)
+  const prev = (i - 1 + presetNames.length) % presetNames.length
+  emit('update:modelValue', presetNames[prev])
+}
+
+function pickNext() {
+  const i = presetNames.indexOf(props.modelValue)
+  const next = (i + 1) % presetNames.length
+  emit('update:modelValue', presetNames[next])
+}
 
 function pickRandom() {
   const current = props.modelValue
