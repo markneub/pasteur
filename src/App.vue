@@ -1,12 +1,8 @@
 <template>
   <div id="app">
     <header class="app-header">
-      <h1 class="app-title">
-        Pasteur
-      </h1>
-      <p class="app-subtitle">
-        Milkdrop visualization exporter
-      </p>
+      <h1 class="app-title">pasteur</h1>
+      <p class="app-subtitle">milkdrop visualization exporter</p>
     </header>
 
     <div
@@ -476,7 +472,7 @@ async function onExport() {
 body {
   background: #0a0a0a;
   color: #e0e0e0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Tomorrow', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
 </style>
@@ -492,28 +488,31 @@ body {
 }
 
 .app-header {
-  padding: 24px 32px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
   border-bottom: 1px solid #1e1e1e;
 }
 
 .app-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-family: 'Gugi', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 400;
   color: #fff;
 }
 
 .app-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 400;
   color: #666;
-  margin-top: 2px;
 }
 
 .compat-banner {
   background: #2a1a1a;
   border-bottom: 1px solid #5c2a2a;
   color: #e05c5c;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   padding: 10px 32px;
 }
 
@@ -599,7 +598,7 @@ body {
 }
 
 .file-name {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: #ddd;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -607,14 +606,14 @@ body {
 }
 
 .file-duration {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: #666;
   flex-shrink: 0;
 }
 
 .section-heading {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #aaa;
 }
 
@@ -629,12 +628,12 @@ body {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   color: #ccc;
 }
 
 .title-text-label {
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   color: #ccc;
 }
 
@@ -644,7 +643,7 @@ body {
   border: 1px solid #333;
   border-radius: 5px;
   color: #e0e0e0;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-family: inherit;
   padding: 5px 10px;
 }
@@ -659,7 +658,7 @@ body {
 }
 
 .status-text {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: #888;
 }
 

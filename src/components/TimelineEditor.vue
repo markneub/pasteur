@@ -743,7 +743,7 @@ onUnmounted(() => {
   color: #ccc;
   padding: 4px 10px;
   border-radius: 5px;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-family: inherit;
   line-height: 1.4;
   cursor: pointer;
@@ -763,7 +763,7 @@ onUnmounted(() => {
 
 .ctrl-btn--sm {
   padding: 3px 8px;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 
 .ctrl-btn--danger:hover:not(:disabled) {
@@ -772,21 +772,21 @@ onUnmounted(() => {
 }
 
 .time-display {
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   color: #888;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
 .clip-display {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #666;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
 .cue-label {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 
 .zoom-controls {
@@ -849,13 +849,13 @@ onUnmounted(() => {
 }
 
 .cue-pop-title {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: #ddd;
 }
 
 .cue-pop-time {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #888;
   font-variant-numeric: tabular-nums;
   margin-left: auto;
@@ -870,7 +870,7 @@ onUnmounted(() => {
 }
 
 .cue-pop-label {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #888;
 }
 
@@ -887,7 +887,7 @@ onUnmounted(() => {
   color: #e0e0e0;
   border-radius: 5px;
   padding: 3px 8px;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-family: inherit;
   text-align: right;
 }
@@ -903,7 +903,7 @@ onUnmounted(() => {
 }
 
 .cue-pop-unit {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #888;
 }
 </style>
