@@ -6,80 +6,55 @@
         Output size
       </Label>
 
-      <!-- Radio: preset -->
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          type="radio"
-          name="size-mode"
-          value="preset"
-          :checked="sizeMode === 'preset'"
-          class="accent-primary"
-          @change="sizeMode = 'preset'"
-        >
-        <Select
-          :model-value="activeSizePreset"
-          @update:model-value="onSizePresetChange"
-          @open-change="(open) => { if (open) sizeMode = 'preset' }"
-        >
-          <SelectTrigger
-            class="h-8 flex-1 text-sm"
-            @click="sizeMode = 'preset'"
+      <Select :model-value="selectedOption" @update:model-value="onSizeOptionChange">
+        <SelectTrigger class="h-8 text-sm">
+          <SelectValue placeholder="Select size…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            v-for="preset in SIZE_PRESETS"
+            :key="preset.label"
+            :value="preset.label"
           >
-            <SelectValue placeholder="Select size…" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="preset in SIZE_PRESETS"
-              :key="preset.label"
-              :value="preset.label"
-            >
-              {{ preset.label }} ({{ preset.width }}×{{ preset.height }})
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </label>
+            {{ preset.label }} ({{ preset.width }}×{{ preset.height }})
+          </SelectItem>
+          <SelectItem value="Custom">
+            Custom
+          </SelectItem>
+        </SelectContent>
+      </Select>
 
-      <!-- Radio: custom -->
-      <label class="flex items-center gap-2 cursor-pointer">
+      <!-- Custom size inputs -->
+      <div v-if="selectedOption === 'Custom'" class="flex items-center gap-2">
         <input
-          type="radio"
-          name="size-mode"
-          value="custom"
-          :checked="sizeMode === 'custom'"
-          class="accent-primary"
-          @change="sizeMode = 'custom'"
+          class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          type="number"
+          min="1"
+          max="7680"
+          placeholder="Width"
+          aria-label="Custom width in pixels"
+          :value="customWidth"
+          @change="onCustomWidth"
+          @blur="onCustomWidthBlur"
         >
-        <div class="flex items-center gap-2">
-          <input
-            class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            type="number"
-            min="1"
-            max="7680"
-            placeholder="Width"
-            aria-label="Custom width in pixels"
-            :value="customWidth"
-            @focus="sizeMode = 'custom'"
-            @change="onCustomWidth"
-          >
-          <span class="text-sm text-muted-foreground">×</span>
-          <input
-            class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            type="number"
-            min="1"
-            max="4320"
-            placeholder="Height"
-            aria-label="Custom height in pixels"
-            :value="customHeight"
-            @focus="sizeMode = 'custom'"
-            @change="onCustomHeight"
-          >
-          <span class="text-sm text-muted-foreground">px</span>
-        </div>
-      </label>
+        <span class="text-sm text-muted-foreground">×</span>
+        <input
+          class="w-20 rounded-md border border-input bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          type="number"
+          min="1"
+          max="4320"
+          placeholder="Height"
+          aria-label="Custom height in pixels"
+          :value="customHeight"
+          @change="onCustomHeight"
+          @blur="onCustomHeightBlur"
+        >
+        <span class="text-sm text-muted-foreground">px</span>
+      </div>
 
       <!-- Warning for very large custom sizes -->
       <p
-        v-if="sizeMode === 'custom' && (customWidth > 3840 || customHeight > 2160)"
+        v-if="selectedOption === 'Custom' && (customWidth > 3840 || customHeight > 2160)"
         class="text-xs text-yellow-500"
       >
         Large resolutions may fail on some devices.
@@ -186,28 +161,29 @@ function matchesPreset(w, h) {
   return SIZE_PRESETS.find(p => p.width === w && p.height === h) ?? null
 }
 
-const sizeMode = ref(matchesPreset(props.modelValue.width, props.modelValue.height) ? 'preset' : 'custom')
-const customWidth = ref(props.modelValue.width)
-const customHeight = ref(props.modelValue.height)
+const initialPreset = matchesPreset(props.modelValue.width, props.modelValue.height)
+const selectedOption = ref(initialPreset ? initialPreset.label : 'Custom')
+const customWidth = ref(initialPreset ? 1024 : props.modelValue.width)
+const customHeight = ref(initialPreset ? 768 : props.modelValue.height)
 
 watch(() => props.modelValue, (val) => {
   const preset = matchesPreset(val.width, val.height)
   if (preset) {
-    sizeMode.value = 'preset'
+    selectedOption.value = preset.label
   } else {
+    selectedOption.value = 'Custom'
     customWidth.value = val.width
     customHeight.value = val.height
   }
 })
 
-const activeSizePreset = computed(() => {
-  if (sizeMode.value !== 'preset') return null
-  return matchesPreset(props.modelValue.width, props.modelValue.height)?.label ?? null
-})
-
-function onSizePresetChange(val) {
+function onSizeOptionChange(val) {
   if (!val) return
-  sizeMode.value = 'preset'
+  selectedOption.value = val
+  if (val === 'Custom') {
+    emit('update:modelValue', { ...props.modelValue, width: customWidth.value, height: customHeight.value })
+    return
+  }
   const preset = SIZE_PRESETS.find(p => p.label === val)
   if (preset) emit('update:modelValue', { ...props.modelValue, width: preset.width, height: preset.height })
 }
@@ -222,6 +198,10 @@ function onFormatChange(val) {
   emit('update:modelValue', { ...props.modelValue, format: val })
 }
 
+function toEven(n) {
+  return n % 2 === 0 ? n : n + 1
+}
+
 function onCustomWidth(event) {
   const width = Math.max(1, Math.min(7680, parseInt(event.target.value) || 1))
   customWidth.value = width
@@ -230,6 +210,18 @@ function onCustomWidth(event) {
 
 function onCustomHeight(event) {
   const height = Math.max(1, Math.min(4320, parseInt(event.target.value) || 1))
+  customHeight.value = height
+  emit('update:modelValue', { ...props.modelValue, height })
+}
+
+function onCustomWidthBlur(event) {
+  const width = toEven(Math.max(1, Math.min(7680, parseInt(event.target.value) || 1)))
+  customWidth.value = width
+  emit('update:modelValue', { ...props.modelValue, width })
+}
+
+function onCustomHeightBlur(event) {
+  const height = toEven(Math.max(1, Math.min(4320, parseInt(event.target.value) || 1)))
   customHeight.value = height
   emit('update:modelValue', { ...props.modelValue, height })
 }
