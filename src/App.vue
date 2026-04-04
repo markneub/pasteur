@@ -250,8 +250,8 @@
           rel="noopener"
         >butterchurn</a>,
         Ryan Geiss for Milkdrop, and to all of the preset authors.
-        Exports powered by WebCodecs.
       </p>
+      <p>All processing happens on your device. Works best in Safari or Chrome.</p>
     </footer>
   </div>
 </template>
