@@ -41,7 +41,7 @@
           aria-label="Add cue at current time"
           @click="onAddCue"
         >
-          Add Preset Cue
+          <span class="add-cue-label--full">Add Preset Cue</span><span class="add-cue-label--short">+ Cue</span>
         </button>
         <div class="zoom-divider" />
         <button
@@ -933,5 +933,12 @@ onUnmounted(() => {
 .cue-pop-unit {
   font-size: 0.75rem;
   color: #888;
+}
+
+.add-cue-label--short { display: none; }
+
+@media (max-width: 480px) {
+  .add-cue-label--full { display: none; }
+  .add-cue-label--short { display: inline; }
 }
 </style>
