@@ -782,7 +782,7 @@ body {
 .title-text-option-label {
   font-size: 0.875rem;
   color: #888;
-  width: 52px;
+  width: 56px;
   flex-shrink: 0;
 }
 
