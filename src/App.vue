@@ -133,9 +133,9 @@
           </div>
           <p
             v-else
-            class="no-file-hint"
+            class="section-heading"
           >
-            Load an audio file to get started
+            Output Settings
           </p>
 
           <Separator />
@@ -614,10 +614,11 @@ body {
   flex-shrink: 0;
 }
 
-.no-file-hint {
-  font-size: 0.82rem;
+.section-heading {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: #555;
-  font-style: italic;
 }
 
 .title-text-section {

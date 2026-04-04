@@ -1,9 +1,9 @@
 <template>
   <div class="flex flex-col gap-5">
-    <!-- Output size -->
+    <!-- Size -->
     <div class="flex flex-col gap-2">
       <Label class="text-[0.7rem] uppercase tracking-widest text-muted-foreground">
-        Output size
+        Size
       </Label>
 
       <Select :model-value="selectedOption" @update:model-value="onSizeOptionChange">
