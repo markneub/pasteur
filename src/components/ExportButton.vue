@@ -1,13 +1,5 @@
 <template>
   <div class="flex flex-col gap-2.5">
-    <!-- Estimated file size (idle only) -->
-    <p
-      v-if="!isExporting && clipEnd > clipStart"
-      class="text-xs text-muted-foreground"
-    >
-      Est. {{ estimatedSizeMb }} MB
-    </p>
-
     <!-- Error banner -->
     <p
       v-if="exportError"
@@ -78,18 +70,6 @@ const emit = defineEmits(['export', 'cancel'])
 const formatLabel = computed(() =>
   props.exportSettings.format === 'webm' ? 'WebM' : 'MP4'
 )
-
-// Effective bitrate used for size estimation. The encoder is configured at
-// 8 Mbps but butterchurn content compresses well; empirically ~2 Mbps actual.
-const VIDEO_BITRATE = 2_000_000  // ~2 Mbps effective
-const AUDIO_BITRATE = 192_000    // 192 kbps
-
-const estimatedSizeMb = computed(() => {
-  const clipDuration = props.clipEnd - props.clipStart
-  if (clipDuration <= 0) return '0.0'
-  const totalBits = (VIDEO_BITRATE + AUDIO_BITRATE) * clipDuration
-  return (totalBits / 8 / 1_000_000).toFixed(1)
-})
 
 const phaseLabel = computed(() => {
   if (props.exportPhase === 'analyzing') return 'Analyzing audio…'
