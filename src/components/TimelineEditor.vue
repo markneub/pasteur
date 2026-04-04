@@ -35,15 +35,15 @@
         class="clip-display"
       />
 
-      <button
-        class="ctrl-btn ctrl-btn--sm"
-        aria-label="Add cue at current time"
-        @click="onAddCue"
-      >
-        Add Preset Cue
-      </button>
-
       <div class="zoom-controls">
+        <button
+          class="ctrl-btn ctrl-btn--sm"
+          aria-label="Add cue at current time"
+          @click="onAddCue"
+        >
+          Add Preset Cue
+        </button>
+        <div class="zoom-divider" />
         <button
           class="ctrl-btn ctrl-btn--sm"
           aria-label="Zoom out"
@@ -52,7 +52,7 @@
         >
           –
         </button>
-        <span class="zoom-label">{{ zoomLevel > 1 ? zoomLevel + '×' : 'Fit' }}</span>
+        <span class="zoom-label">{{ zoomLevel > 1 ? zoomLevel + '×' : 'Zoom' }}</span>
         <button
           class="ctrl-btn ctrl-btn--sm"
           aria-label="Zoom in"
@@ -806,6 +806,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   margin-left: auto;
+}
+
+.zoom-divider {
+  width: 1px;
+  height: 16px;
+  background: #444;
+  margin: 0 4px;
 }
 
 .zoom-label {
