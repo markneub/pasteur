@@ -1,7 +1,43 @@
 diff --git a/node_modules/butterchurn/lib/butterchurn.js b/node_modules/butterchurn/lib/butterchurn.js
-index f0b4bb1..bee902a 100644
+index f0b4bb1..824eb1d 100644
 --- a/node_modules/butterchurn/lib/butterchurn.js
 +++ b/node_modules/butterchurn/lib/butterchurn.js
+@@ -2351,7 +2351,7 @@ function () {
+     this.blendPattern = new _blendPattern__WEBPACK_IMPORTED_MODULE_17__["default"](params);
+     this.resampleShader = new _shaders_resample__WEBPACK_IMPORTED_MODULE_12__["default"](gl);
+     this.supertext = {
+-      startTime: -1
++      startWallTime: -1
+     };
+     this.warpUVs = new Float32Array((this.mesh_width + 1) * (this.mesh_height + 1) * 2);
+     this.warpColor = new Float32Array((this.mesh_width + 1) * (this.mesh_height + 1) * 4);
+@@ -2842,8 +2842,8 @@ function () {
+       var innerColor = [mdVSFrameMixed.ib_r, mdVSFrameMixed.ib_g, mdVSFrameMixed.ib_b, mdVSFrameMixed.ib_a];
+       this.innerBorder.drawBorder(innerColor, mdVSFrameMixed.ib_size, mdVSFrameMixed.ob_size);
+ 
+-      if (this.supertext.startTime >= 0) {
+-        var progress = (this.time - this.supertext.startTime) / this.supertext.duration;
++      if (this.supertext.startWallTime >= 0) {
++        var progress = (performance.now() - this.supertext.startWallTime) / (this.supertext.duration * 1000);
+ 
+         if (progress >= 1) {
+           this.titleText.renderTitle(progress, true, globalVars);
+@@ -2881,12 +2881,12 @@ function () {
+         this.compShader.renderQuadTexture(true, this.targetTexture, this.blurTexture1, this.blurTexture2, this.blurTexture3, blurMins, blurMaxs, this.mdVSFrameMixed, this.warpColor);
+       }
+ 
+-      if (this.supertext.startTime >= 0) {
+-        var progress = (this.time - this.supertext.startTime) / this.supertext.duration;
++      if (this.supertext.startWallTime >= 0) {
++        var progress = (performance.now() - this.supertext.startWallTime) / (this.supertext.duration * 1000);
+         this.titleText.renderTitle(progress, false, this.globalVars);
+ 
+         if (progress >= 1) {
+-          this.supertext.startTime = -1;
++          this.supertext.startWallTime = -1;
+         }
+       }
+ 
 @@ -2899,12 +2899,13 @@ function () {
      }
    }, {
@@ -10,8 +46,9 @@ index f0b4bb1..bee902a 100644
 +    value: function launchSongTitleAnim(text, options) {
 +      var opts = options || {};
        this.supertext = {
-         startTime: this.time,
+-        startTime: this.time,
 -        duration: 1.7
++        startWallTime: performance.now(),
 +        duration: opts.duration != null ? opts.duration : 1.7
        };
 -      this.titleText.generateTitleTexture(text);
