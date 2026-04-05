@@ -164,6 +164,28 @@
             >
             <template v-if="showTitle">
               <div class="title-text-options-row">
+                <label class="title-text-option-label">Duration</label>
+                <input
+                  v-model.number="titleDuration"
+                  type="number"
+                  min="0.1"
+                  max="30"
+                  step="0.1"
+                  class="title-text-input title-text-input--short"
+                  :disabled="isExporting"
+                  aria-label="Title display duration in seconds"
+                >
+                <span class="title-text-unit">s</span>
+                <label class="title-text-option-label title-text-option-label--push-right">Color</label>
+                <input
+                  v-model="titleColor"
+                  type="color"
+                  class="title-text-color"
+                  :disabled="isExporting"
+                  aria-label="Title text color"
+                >
+              </div>
+              <div class="title-text-options-row">
                 <label class="title-text-option-label">Font</label>
                 <select
                   v-model="titleFontFamily"
@@ -178,60 +200,33 @@
                   >{{ family }}</option>
                 </select>
               </div>
-              <div class="title-text-options-two-col">
-                <div class="title-text-options-row">
-                  <label class="title-text-option-label">Style</label>
-                  <select
-                    v-model="titleFontStyle"
-                    class="title-text-input"
-                    :disabled="isExporting"
-                    aria-label="Title font style"
-                  >
-                    <option value="italic">Italic</option>
-                    <option value="normal">Normal</option>
-                    <option value="bold">Bold</option>
-                    <option value="bold italic">Bold Italic</option>
-                  </select>
-                </div>
-                <div class="title-text-options-row">
-                  <label class="title-text-option-label">Size</label>
-                  <select
-                    v-model.number="titleFontSize"
-                    class="title-text-input"
-                    :disabled="isExporting"
-                    aria-label="Title font size"
-                  >
-                    <option :value="0.75">Small</option>
-                    <option :value="1">Medium</option>
-                    <option :value="1.5">Large</option>
-                  </select>
-                </div>
+              <div class="title-text-options-row">
+                <label class="title-text-option-label">Style</label>
+                <select
+                  v-model="titleFontStyle"
+                  class="title-text-input"
+                  :disabled="isExporting"
+                  aria-label="Title font style"
+                >
+                  <option value="italic">Italic</option>
+                  <option value="normal">Normal</option>
+                  <option value="bold">Bold</option>
+                  <option value="bold italic">Bold Italic</option>
+                </select>
               </div>
-              <div class="title-text-options-two-col">
-                <div class="title-text-options-row">
-                  <label class="title-text-option-label">Duration</label>
-                  <input
-                    v-model.number="titleDuration"
-                    type="number"
-                    min="0.1"
-                    max="30"
-                    step="0.1"
-                    class="title-text-input title-text-input--short"
-                    :disabled="isExporting"
-                    aria-label="Title display duration in seconds"
-                  >
-                  <span class="title-text-unit">s</span>
-                </div>
-                <div class="title-text-options-row">
-                  <label class="title-text-option-label">Color</label>
-                  <input
-                    v-model="titleColor"
-                    type="color"
-                    class="title-text-color"
-                    :disabled="isExporting"
-                    aria-label="Title text color"
-                  >
-                </div>
+              <div class="title-text-options-row">
+                <label class="title-text-option-label">Size</label>
+                <select
+                  v-model.number="titleFontSize"
+                  class="title-text-input"
+                  :disabled="isExporting"
+                  aria-label="Title font size"
+                >
+                  <option :value="0.75">Small</option>
+                  <option :value="1">Medium</option>
+                  <option :value="1.5">Large</option>
+                  <option :value="2.25">Extra Large</option>
+                </select>
               </div>
             </template>
           </div>
@@ -352,8 +347,8 @@ const { peaks, computePeaks } = useWaveform()
 const showTitle = ref(true)
 const titleText = ref('')
 const titleDuration = ref(2.5)
-const titleFontFamily = ref('Times New Roman')
-const titleFontStyle = ref('italic')
+const titleFontFamily = ref('Arial')
+const titleFontStyle = ref('normal')
 const titleFontSize = ref(1)
 const titleColor = ref('#ffffff')
 const FALLBACK_FONTS = [
@@ -791,6 +786,10 @@ body {
   padding: 5px 10px;
 }
 
+select.title-text-input {
+  padding-right: 24px;
+}
+
 .title-text-input:focus {
   outline: none;
   border-color: #7c6af7;
@@ -817,14 +816,9 @@ body {
   width: 72px;
 }
 
-.title-text-options-two-col {
-  display: flex;
-  gap: 12px;
-}
-
-.title-text-options-two-col .title-text-options-row {
-  flex: 1;
-  min-width: 0;
+.title-text-option-label--push-right {
+  margin-left: auto;
+  width: auto;
 }
 
 .title-text-color {
