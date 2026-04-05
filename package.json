@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "[ \"$NETLIFY\" = 'true' ] || patch-package"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -31,6 +32,7 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "eslint": "^9.18.0",
     "eslint-plugin-vue": "^9.32.0",
+    "patch-package": "^8.0.1",
     "vite": "^6.0.5",
     "vitest": "^3.0.4"
   }
