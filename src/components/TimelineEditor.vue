@@ -26,14 +26,10 @@
         ⏸&#xFE0E;
       </button>
 
-      <span
-        ref="clipDisplayEl"
-        class="time-display"
-      />
-      <span
-        ref="timeDisplayEl"
-        class="clip-display"
-      />
+      <span class="time-display"><span
+        v-show="isClipped"
+        class="clip-prefix"
+      >Clip: </span><span ref="clipDisplayEl" /></span>
 
       <div class="zoom-controls">
         <button
@@ -240,8 +236,9 @@ let cueOpenAtPointerDown = null  // openCueIndex value captured at pointerdown t
 let displayTime = 0
 
 // DOM refs for time displays (updated directly to avoid re-renders)
-const timeDisplayEl = ref(null)
 const clipDisplayEl = ref(null)
+
+const isClipped = computed(() => props.clipStart > 0.01 || props.clipEnd < props.duration - 0.01)
 
 // rAF handle
 let animFrameId = null
@@ -322,12 +319,13 @@ function draw() {
   // Update display time from live clock or stopped position
   displayTime = props.isPlaying ? props.getCurrentTime() : props.playheadTime
   if (clipDisplayEl.value) {
-    const clipPos = Math.max(0, displayTime - props.clipStart)
-    const clipDur = props.clipEnd - props.clipStart
-    clipDisplayEl.value.textContent = `Clip: ${formatTime(clipPos)} / ${formatTime(clipDur)}`
-  }
-  if (timeDisplayEl.value) {
-    timeDisplayEl.value.textContent = `Original: ${formatTime(displayTime)} / ${formatTime(props.duration)}`
+    if (isClipped.value) {
+      const clipPos = Math.max(0, displayTime - props.clipStart)
+      const clipDur = props.clipEnd - props.clipStart
+      clipDisplayEl.value.textContent = `${formatTime(clipPos)} / ${formatTime(clipDur)}`
+    } else {
+      clipDisplayEl.value.textContent = `${formatTime(displayTime)} / ${formatTime(props.duration)}`
+    }
   }
 
   ctx.clearRect(0, 0, W, TOTAL_H)
@@ -823,15 +821,9 @@ onUnmounted(() => {
   font-size: 0.875rem;
   color: #888;
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.clip-display {
-  font-size: 0.75rem;
-  color: #666;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
 
 .cue-label {
   font-size: 0.75rem;
@@ -967,5 +959,7 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .add-cue-label--full { display: none; }
   .add-cue-label--short { display: inline; }
+  .clip-prefix { display: none !important; }
+  .zoom-label { display: none; }
 }
 </style>
