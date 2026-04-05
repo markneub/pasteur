@@ -78,7 +78,7 @@
         <div
           v-if="isOpen"
           class="absolute z-50 mt-1 min-w-full rounded-md border border-border bg-popover shadow-md"
-          style="width: max-content; max-width: min(400px, 90vw)"
+          style="width: 100%; max-width: 100%"
         >
           <!-- Search input -->
           <div class="p-2 border-b border-border">
