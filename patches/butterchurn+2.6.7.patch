@@ -1,5 +1,5 @@
 diff --git a/node_modules/butterchurn/lib/butterchurn.js b/node_modules/butterchurn/lib/butterchurn.js
-index f0b4bb1..824eb1d 100644
+index f0b4bb1..f0f33ea 100644
 --- a/node_modules/butterchurn/lib/butterchurn.js
 +++ b/node_modules/butterchurn/lib/butterchurn.js
 @@ -2351,7 +2351,7 @@ function () {
@@ -52,7 +52,7 @@ index f0b4bb1..824eb1d 100644
 +        duration: opts.duration != null ? opts.duration : 1.7
        };
 -      this.titleText.generateTitleTexture(text);
-+      this.titleText.generateTitleTexture(text, opts.fontFamily, opts.fontStyle);
++      this.titleText.generateTitleTexture(text, opts.fontFamily, opts.fontStyle, opts.fontSize, opts.color);
      }
    }, {
      key: "toDataURL",
@@ -61,17 +61,27 @@ index f0b4bb1..824eb1d 100644
    _createClass(TitleText, [{
      key: "generateTitleTexture",
 -    value: function generateTitleTexture(text) {
-+    value: function generateTitleTexture(text, fontFamily, fontStyle) {
++    value: function generateTitleTexture(text, fontFamily, fontStyle, fontSize, color) {
        this.context2D.clearRect(0, 0, this.texsizeX, this.texsizeY);
        this.fontSize = Math.floor(16 * (this.texsizeX / 256));
-       this.fontSize = Math.max(this.fontSize, 6);
+-      this.fontSize = Math.max(this.fontSize, 6);
 -      this.context2D.font = "italic ".concat(this.fontSize, "px Times New Roman");
++      this.fontSize = Math.max(Math.floor(this.fontSize * (fontSize || 1)), 6);
 +      var resolvedFamily = fontFamily || "Times New Roman";
 +      var resolvedStyle = fontStyle || "italic";
 +      this.context2D.font = "".concat(resolvedStyle, " ").concat(this.fontSize, "px ").concat(resolvedFamily);
        var titleText = text;
        var textLength = this.context2D.measureText(titleText).width;
  
+@@ -5182,7 +5185,7 @@ function () {
+         textLength = this.context2D.measureText(titleText).width;
+       }
+ 
+-      this.context2D.fillStyle = '#FFFFFF';
++      this.context2D.fillStyle = color || '#FFFFFF';
+       this.context2D.fillText(titleText, (this.texsizeX - textLength) / 2, this.texsizeY / 2);
+       var imageData = new Uint8Array(this.context2D.getImageData(0, 0, this.texsizeX, this.texsizeY).data.buffer);
+       this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 @@ -6712,8 +6715,8 @@ function () {
      }
    }, {

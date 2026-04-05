@@ -164,20 +164,6 @@
             >
             <template v-if="showTitle">
               <div class="title-text-options-row">
-                <label class="title-text-option-label">Duration</label>
-                <input
-                  v-model.number="titleDuration"
-                  type="number"
-                  min="0.1"
-                  max="30"
-                  step="0.1"
-                  class="title-text-input title-text-input--short"
-                  :disabled="isExporting"
-                  aria-label="Title display duration in seconds"
-                >
-                <span class="title-text-unit">s</span>
-              </div>
-              <div class="title-text-options-row">
                 <label class="title-text-option-label">Font</label>
                 <select
                   v-model="titleFontFamily"
@@ -192,19 +178,60 @@
                   >{{ family }}</option>
                 </select>
               </div>
-              <div class="title-text-options-row">
-                <label class="title-text-option-label">Style</label>
-                <select
-                  v-model="titleFontStyle"
-                  class="title-text-input"
-                  :disabled="isExporting"
-                  aria-label="Title font style"
-                >
-                  <option value="italic">Italic</option>
-                  <option value="normal">Normal</option>
-                  <option value="bold">Bold</option>
-                  <option value="bold italic">Bold Italic</option>
-                </select>
+              <div class="title-text-options-two-col">
+                <div class="title-text-options-row">
+                  <label class="title-text-option-label">Style</label>
+                  <select
+                    v-model="titleFontStyle"
+                    class="title-text-input"
+                    :disabled="isExporting"
+                    aria-label="Title font style"
+                  >
+                    <option value="italic">Italic</option>
+                    <option value="normal">Normal</option>
+                    <option value="bold">Bold</option>
+                    <option value="bold italic">Bold Italic</option>
+                  </select>
+                </div>
+                <div class="title-text-options-row">
+                  <label class="title-text-option-label">Size</label>
+                  <select
+                    v-model.number="titleFontSize"
+                    class="title-text-input"
+                    :disabled="isExporting"
+                    aria-label="Title font size"
+                  >
+                    <option :value="0.75">Small</option>
+                    <option :value="1">Medium</option>
+                    <option :value="1.5">Large</option>
+                  </select>
+                </div>
+              </div>
+              <div class="title-text-options-two-col">
+                <div class="title-text-options-row">
+                  <label class="title-text-option-label">Duration</label>
+                  <input
+                    v-model.number="titleDuration"
+                    type="number"
+                    min="0.1"
+                    max="30"
+                    step="0.1"
+                    class="title-text-input title-text-input--short"
+                    :disabled="isExporting"
+                    aria-label="Title display duration in seconds"
+                  >
+                  <span class="title-text-unit">s</span>
+                </div>
+                <div class="title-text-options-row">
+                  <label class="title-text-option-label">Color</label>
+                  <input
+                    v-model="titleColor"
+                    type="color"
+                    class="title-text-color"
+                    :disabled="isExporting"
+                    aria-label="Title text color"
+                  >
+                </div>
               </div>
             </template>
           </div>
@@ -327,6 +354,8 @@ const titleText = ref('')
 const titleDuration = ref(2.5)
 const titleFontFamily = ref('Times New Roman')
 const titleFontStyle = ref('italic')
+const titleFontSize = ref(1)
+const titleColor = ref('#ffffff')
 const FALLBACK_FONTS = [
   'Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Georgia',
   'Impact', 'Lucida Console', 'Palatino Linotype', 'Tahoma', 'Times New Roman',
@@ -358,7 +387,7 @@ watch(showTitle, (val) => { if (val) loadLocalFonts() }, { immediate: true })
 
 // When title settings change, debounce then seek to clipStart and replay
 let titleReplayTimer = null
-watch([titleText, titleDuration, titleFontFamily, titleFontStyle], () => {
+watch([titleText, titleDuration, titleFontFamily, titleFontStyle, titleFontSize, titleColor], () => {
   if (!audioBuffer.value) return
   clearTimeout(titleReplayTimer)
   titleReplayTimer = setTimeout(() => {
@@ -481,6 +510,8 @@ async function maybeLaunchTitle() {
     duration: titleDuration.value,
     fontFamily: titleFontFamily.value,
     fontStyle: titleFontStyle.value,
+    fontSize: titleFontSize.value,
+    color: titleColor.value,
   })
 }
 
@@ -570,6 +601,8 @@ async function onExport() {
       duration: titleDuration.value,
       fontFamily: titleFontFamily.value,
       fontStyle: titleFontStyle.value,
+      fontSize: titleFontSize.value,
+      color: titleColor.value,
     },
   })
   // After export finishes (success, error, or cancel): park playhead at clip start
@@ -782,6 +815,31 @@ body {
 
 .title-text-input--short {
   width: 72px;
+}
+
+.title-text-options-two-col {
+  display: flex;
+  gap: 12px;
+}
+
+.title-text-options-two-col .title-text-options-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.title-text-color {
+  width: 36px;
+  height: 29px;
+  padding: 2px;
+  border: 1px solid #333;
+  border-radius: 5px;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+.title-text-color:disabled {
+  opacity: 0.4;
 }
 
 .title-text-unit {
