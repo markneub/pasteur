@@ -8,6 +8,7 @@ import { resolve } from 'path'
 function patchButterchurn() {
   return {
     name: 'patch-butterchurn',
+    enforce: 'pre',
     transform(code, id) {
       if (!/butterchurn\/lib\/butterchurn\.js$/.test(id)) return null
 
