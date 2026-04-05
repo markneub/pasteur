@@ -588,6 +588,7 @@ function onPointerDown(e) {
 function onPointerMove(e) {
   if (!canvasEl.value) return
   const x = getOffsetX(e)
+  const y = getOffsetY(e)
   const t = xToTime(x)
   currentPointerX = x
 
@@ -624,17 +625,43 @@ function onPointerMove(e) {
     return
   }
 
-  // Hover — update cursor: trim handles > draggable cues > default
+  // Hover — update cursor: trim handles > draggable cues > clickable cues > default
   if (isNearTrimHandle(x)) {
     canvasCursor.value = 'col-resize'
     return
   }
 
-  // Check proximity to draggable cue lines (index > 0)
-  for (let i = 1; i < props.presetTimeline.length; i++) {
+  // Flag tab zone — always pointer
+  if (y >= CANVAS_H) {
+    const FLAG_W = 22
+    for (let i = 0; i < props.presetTimeline.length; i++) {
+      const cueX = timeToX(props.presetTimeline[i].startTime)
+      if (x >= cueX && x <= cueX + FLAG_W) {
+        canvasCursor.value = 'pointer'
+        return
+      }
+    }
+    canvasCursor.value = 'default'
+    return
+  }
+
+  // Cue lines: draggable (index > 0) → col-resize, cue[0] → pointer
+  for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
     const cueX = timeToX(props.presetTimeline[i].startTime)
     if (Math.abs(x - cueX) <= CUE_HIT_PX) {
-      canvasCursor.value = 'ew-resize'
+      canvasCursor.value = i === 0 ? 'pointer' : 'col-resize'
+      return
+    }
+  }
+
+  // Transition duration rectangles — pointer
+  for (let i = props.presetTimeline.length - 1; i >= 0; i--) {
+    const cue = props.presetTimeline[i]
+    if (i === 0 || cue.transitionDuration <= 0) continue
+    const cueX = timeToX(cue.startTime)
+    const endX = timeToX(cue.startTime + cue.transitionDuration)
+    if (x >= cueX && x <= endX) {
+      canvasCursor.value = 'pointer'
       return
     }
   }
