@@ -9,9 +9,9 @@ function patchButterchurn() {
   return {
     name: 'patch-butterchurn',
     transform(code, id) {
-      if (!id.includes('butterchurn/lib/butterchurn.js')) return null
+      if (!/butterchurn\/lib\/butterchurn\.js$/.test(id)) return null
 
-      return code
+      const result = code
         // Initial supertext state
         .replace(
           'this.supertext = {\n      startTime: -1\n    };',
@@ -42,6 +42,16 @@ function patchButterchurn() {
           'value: function launchSongTitleAnim(text) {\n      this.renderer.launchSongTitleAnim(text);\n    }',
           'value: function launchSongTitleAnim(text, options) {\n      this.renderer.launchSongTitleAnim(text, options);\n    }'
         )
+
+      // Verify patches applied — fail the build loudly if any were missed
+      const checks = ['startWallTime', 'opts.fontFamily', 'opts.fontStyle', 'performance.now()']
+      for (const str of checks) {
+        if (!result.includes(str)) {
+          throw new Error(`patchButterchurn: expected "${str}" not found — patch did not apply. Check replacements in vite.config.js.`)
+        }
+      }
+
+      return result
     },
   }
 }
