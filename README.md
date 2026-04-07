@@ -1,34 +1,24 @@
 # Pasteur
 
-A browser-based Milkdrop visualization exporter. Drop in an audio file, watch it visualize, and download the result as MP4 or WebM — all in-browser, no server required.
+A browser-based Milkdrop visualization exporter. Drop in an audio file, watch it visualize, and export the result as MP4 or WebM. No server required; all processing happens in your browser.
+
+- Set preset cues with customizable transition lengths
+- Add a title overlay with font, size, and color controls
+- Export at 4K and beyond
+
+**Live app:** [pasteur.cc](https://pasteur.cc/) &nbsp;|&nbsp; **Example:** [Watch on YouTube](https://youtu.be/TyhisYKU2Dg)
 
 Built with Vue 3, Vite, [butterchurn](https://github.com/jberg/butterchurn), and WebCodecs.
 
-## Requirements
+![Pasteur preview](preview.png)
 
-- Node.js v18+ — v22 recommended
+## Node version
 
-## Node version (nvm)
-
-This project uses Node v22. If your shell's default `node` is too old, activate the right version first:
+This project includes an `.nvmrc` file. If you use nvm, just run:
 
 ```bash
-nvm use v22
+nvm use
 ```
-
-To make v22 the default so you don't have to run this every time:
-
-```bash
-nvm alias default v22
-```
-
-If v22 isn't installed yet:
-
-```bash
-nvm install v22
-```
-
-All `npm` commands below assume the correct Node version is active.
 
 ## Setup
 

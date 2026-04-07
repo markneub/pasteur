@@ -261,11 +261,16 @@
 
     <footer class="app-footer">
       <p>
-        pasteur.cc by <img
+        pasteur.cc by <a
+          href="https://neuinteractive.com/"
+          target="_blank"
+          rel="noopener"
+          class="footer-logo-link"
+        ><img
           src="/ni.png"
           alt="NI"
           class="footer-logo"
-        >.
+        /></a>.
         Credit to jberg for <a
           href="https://github.com/jberg/butterchurn"
           target="_blank"
@@ -858,6 +863,16 @@ select.title-text-input {
   line-height: 1.6;
 }
 
+@media (max-width: 600px) {
+  .app-footer p {
+    display: inline;
+  }
+
+  .app-footer p + p::before {
+    content: ' ';
+  }
+}
+
 .app-footer a {
   color: #555;
   text-decoration: underline;
@@ -868,12 +883,25 @@ select.title-text-input {
   color: #888;
 }
 
+.footer-logo-link {
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
+
 .footer-logo {
   height: 1.1em;
   width: auto;
   vertical-align: middle;
   display: inline-block;
+  margin-right: 1px;
   filter: grayscale(100%) opacity(60%);
+  transition: filter 0.2s ease;
+}
+
+.footer-logo-link:hover .footer-logo {
+  filter: grayscale(40%) opacity(85%);
 }
 
 /* Wide screens: two-column layout */
