@@ -6,7 +6,7 @@ A browser-based Milkdrop visualization exporter. Drop in an audio file, configur
 - Add a title overlay with font, size, and color controls
 - Export at 4K and beyond
 
-**Live app:** [pasteur.cc](https://pasteur.cc/) &nbsp;|&nbsp; **Example:** [Watch on YouTube](https://youtu.be/77seRYCsO-U)
+**Live app:** [pasteur.cc](https://pasteur.cc/) &nbsp;|&nbsp; **Example:** [Watch on YouTube](https://youtu.be/UkZ3a8I5iMg)
 
 Built with Vue 3, Vite, [butterchurn](https://github.com/jberg/butterchurn), and WebCodecs.
 
