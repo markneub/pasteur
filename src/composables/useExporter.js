@@ -209,6 +209,14 @@ export function useExporter() {
           }
         }
 
+        // Butterchurn's title animation uses performance.now() to compute progress,
+        // which drifts in a non-realtime loop. Pin startWallTime so each frame sees
+        // exactly the expected video-time elapsed, giving smooth uniform motion.
+        const supertext = visualizer.renderer?.supertext
+        if (supertext?.startWallTime >= 0) {
+          supertext.startWallTime = performance.now() - i * frameDuration * 1000
+        }
+
         try {
           visualizer.render()
           // Capture a preview frame every ~500ms of video time
