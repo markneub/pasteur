@@ -27,6 +27,15 @@
       @change="onChangeFileInput"
     >
 
+    <!-- Hidden file input for config import -->
+    <input
+      ref="configFileInputEl"
+      type="file"
+      accept="application/json,.json"
+      style="display:none"
+      @change="onConfigImport"
+    >
+
     <main class="app-main">
       <div class="content-layout">
         <!-- Left column: preview + timeline -->
@@ -141,6 +150,28 @@
           </p>
 
           <Separator />
+
+          <div
+            v-if="audioFile"
+            class="config-io-row"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="isExporting"
+              @click="exportConfig"
+            >
+              Export Config
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="isExporting"
+              @click="configFileInputEl?.click()"
+            >
+              Import Config
+            </Button>
+          </div>
 
           <!-- Title text -->
           <div class="title-text-section">
@@ -305,6 +336,7 @@ const audioFileName = ref('')
 const audioDuration = ref(0)
 const visualizerPreviewRef = ref(null)
 const changeFileInputEl = ref(null)
+const configFileInputEl = ref(null)
 const isDraggingOverPreview = ref(false)
 let previewDragCounter = 0
 
@@ -552,6 +584,54 @@ async function onChangeFileInput(e) {
   e.target.value = '' // reset so the same file can be re-selected
   if (!file) return
   await onFileSelected(file)
+}
+
+function exportConfig() {
+  const config = {
+    version: 1,
+    presetTimeline: presetTimeline.value,
+    clipStart: clipStart.value,
+    clipEnd: clipEnd.value,
+    showTitle: showTitle.value,
+    titleText: titleText.value,
+    titleDuration: titleDuration.value,
+    titleFontFamily: titleFontFamily.value,
+    titleFontStyle: titleFontStyle.value,
+    titleFontSize: titleFontSize.value,
+    titleColor: titleColor.value,
+    exportSettings: exportSettings.value,
+  }
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'pasteur-config.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function onConfigImport(e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    try {
+      const config = JSON.parse(ev.target.result)
+      if (config.presetTimeline) presetTimeline.value = config.presetTimeline
+      if (config.clipStart != null) clipStart.value = config.clipStart
+      if (config.clipEnd !== undefined) clipEnd.value = config.clipEnd
+      if (config.showTitle != null) showTitle.value = config.showTitle
+      if (config.titleText != null) titleText.value = config.titleText
+      if (config.titleDuration != null) titleDuration.value = config.titleDuration
+      if (config.titleFontFamily) titleFontFamily.value = config.titleFontFamily
+      if (config.titleFontStyle) titleFontStyle.value = config.titleFontStyle
+      if (config.titleFontSize != null) titleFontSize.value = config.titleFontSize
+      if (config.titleColor) titleColor.value = config.titleColor
+      if (config.exportSettings) exportSettings.value = config.exportSettings
+    } catch { /* invalid JSON — silently ignore */ }
+  }
+  reader.readAsText(file)
 }
 
 function onPreviewDragEnter() {
@@ -867,6 +947,11 @@ select.title-text-input {
 
 .status-text--error {
   color: #e05c5c;
+}
+
+.config-io-row {
+  display: flex;
+  gap: 8px;
 }
 
 .app-footer {
