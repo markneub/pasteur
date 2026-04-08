@@ -192,6 +192,8 @@
                   class="title-text-input"
                   :disabled="isExporting"
                   aria-label="Title font family"
+                  @mousedown="loadLocalFonts"
+                  @focus="loadLocalFonts"
                 >
                   <option
                     v-for="family in fontSelectOptions"
@@ -383,7 +385,6 @@ const fontSelectOptions = computed(() => {
   return families
 })
 
-watch(showTitle, (val) => { if (val) loadLocalFonts() }, { immediate: true })
 
 // When title settings change, debounce then seek to clipStart and replay
 let titleReplayTimer = null
