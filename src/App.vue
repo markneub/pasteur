@@ -480,11 +480,24 @@ const {
   canExportWebM,
 } = useBrowserSupport()
 
-onMounted(checkCodecSupport)
+onMounted(() => {
+  checkCodecSupport()
+  window.addEventListener('keydown', onKeyDown)
+})
 
 onUnmounted(() => {
   if (playbackRafId) { cancelAnimationFrame(playbackRafId); playbackRafId = null }
+  window.removeEventListener('keydown', onKeyDown)
 })
+
+function onKeyDown(e) {
+  if (e.code !== 'Space') return
+  const tag = document.activeElement?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+  if (!audioBuffer.value || isExporting.value) return
+  e.preventDefault()
+  isPlaying.value ? stop() : onTimelinePlay()
+}
 
 // Whether the currently selected export format is supported in this browser
 const isSelectedFormatSupported = computed(() => {

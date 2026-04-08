@@ -1,12 +1,12 @@
 # Pasteur
 
-A browser-based Milkdrop visualization exporter. Drop in an audio file, watch it visualize, and export the result as MP4 or WebM. No server required; all processing happens in your browser.
+A browser-based Milkdrop visualization exporter. Drop in an audio file, configuration your visualization, and export the result as MP4 or WebM. No server required; all processing happens in your browser.
 
 - Set preset cues with customizable transition lengths
 - Add a title overlay with font, size, and color controls
 - Export at 4K and beyond
 
-**Live app:** [pasteur.cc](https://pasteur.cc/) &nbsp;|&nbsp; **Example:** [Watch on YouTube](https://youtu.be/TyhisYKU2Dg)
+**Live app:** [pasteur.cc](https://pasteur.cc/) &nbsp;|&nbsp; **Example:** [Watch on YouTube](https://youtu.be/77seRYCsO-U)
 
 Built with Vue 3, Vite, [butterchurn](https://github.com/jberg/butterchurn), and WebCodecs.
 
