@@ -211,8 +211,9 @@ export function useExporter() {
 
         try {
           visualizer.render()
-          // Capture a preview frame every 10 frames for the UI preview
-          if (i % 10 === 0 || i === 0) {
+          // Capture a preview frame every ~500ms of video time
+          const previewInterval = Math.max(1, Math.round(fps * 0.5))
+          if (i % previewInterval === 0) {
             try { exportPreviewUrl.value = hiddenCanvas.toDataURL('image/jpeg', 0.7) } catch { /* ignore */ }
           }
         } catch (renderErr) {
