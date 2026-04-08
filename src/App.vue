@@ -589,9 +589,12 @@ async function onChangeFileInput(e) {
 function exportConfig() {
   const config = {
     version: 1,
-    presetTimeline: presetTimeline.value,
-    clipStart: clipStart.value,
-    clipEnd: clipEnd.value,
+    presetTimeline: presetTimeline.value.map((cue) => ({
+      ...cue,
+      startTime: Math.round(cue.startTime * 100) / 100,
+    })),
+    clipStart: Math.round(clipStart.value * 100) / 100,
+    clipEnd: clipEnd.value != null ? Math.round(clipEnd.value * 100) / 100 : null,
     showTitle: showTitle.value,
     titleText: titleText.value,
     titleDuration: titleDuration.value,
