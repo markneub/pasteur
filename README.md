@@ -1,6 +1,6 @@
 # Pasteur
 
-A browser-based Milkdrop visualization exporter. Drop in an audio file, configuration your visualization, and export the result as MP4 or WebM. No server required; all processing happens in your browser.
+A browser-based Milkdrop visualization exporter. Drop in an audio file, configuration your visualization, and export the result as MP4 or WebM. All processing happens in your browser!
 
 - Set preset cues with customizable transition lengths
 - Add a title overlay with font, size, and color controls
