@@ -4,3 +4,15 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+# Hashed assets (JS/CSS/etc) — cache forever in both browser and Cloudflare
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Everything else (HTML, etc) — browser revalidates, Cloudflare caches for 1 hour
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, s-maxage=3600, must-revalidate"
